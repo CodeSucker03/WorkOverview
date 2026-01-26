@@ -1,0 +1,112 @@
+{
+  "ActiveQueries": [
+    {
+      "id": "b1_approval_procurement_needs",
+      "text": "B1: Phê duyệt tờ trình về nguyên tắc nhu cầu mua sắm",
+      "type": "folder",
+      "children": [
+        {
+          "id": "b1_save_draft",
+          "text": "Save draft",
+          "type": "document"
+        },
+        {
+          "id": "b1_init_procurement_needs",
+          "text": "Khởi tạo tờ trình về nguyên tắc nhu cầu mua sắm",
+          "type": "document",
+          "selected": true
+        },
+        {
+          "id": "b1_approve_procurement_needs",
+          "text": "Phê duyệt tờ trình về nguyên tắc nhu cầu mua sắm",
+          "type": "document"
+        }
+      ]
+    },
+    {
+      "id": "b2_approval_detailed_plan",
+      "text": "B2: Phê duyệt Đầu bài chi tiết",
+      "type": "folder",
+      "children": [
+        {
+          "id": "b2_build_detailed_plan",
+          "text": "Xây dựng đầu bài chi tiết",
+          "type": "document"
+        },
+        {
+          "id": "b2_approve_detailed_plan",
+          "text": "Phê duyệt đầu bài chi tiết",
+          "type": "document"
+        }
+      ]
+    },
+    {
+      "id": "b3_approval_scoring_negotiation",
+      "text": "B3: Phê duyệt KQ chấm điểm NCC và PA đàm phán",
+      "type": "folder",
+      "children": [
+        {
+          "id": "b3_score_ncc",
+          "text": "Chấm điểm NCC",
+          "type": "document"
+        },
+        {
+          "id": "b3_approve_scoring_negotiation_doc",
+          "text": "Phê duyệt KQ chấm điểm NCC và phương án đàm phán",
+          "type": "document"
+        }
+      ]
+    },
+    {
+      "id": "b4_approval_ncc_price_terms",
+      "text": "B4: Phê duyệt NCC, giá, các điều kiện, điều khoản",
+      "type": "folder",
+      "children": [
+        {
+          "id": "b4_submit_ncc_price_terms",
+          "text": "Trình NCC, giá và điều kiện, điều khoản với NCC",
+          "type": "document"
+        },
+        {
+          "id": "b4_approve_ncc_price_terms_doc",
+          "text": "Phê duyệt NCC, giá và các điều kiện, điều khoản",
+          "type": "document"
+        }
+      ]
+    },
+    {
+      "id": "b5_sign_contract",
+      "text": "B5: Ký hợp đồng",
+      "type": "folder",
+      "children": [
+        {
+          "id": "b5_init_contract",
+          "text": "Khởi tạo hợp đồng",
+          "type": "document"
+        },
+        {
+          "id": "b5_approve_sign_contract",
+          "text": "Phê duyệt và ký hợp đồng",
+          "type": "document"
+        }
+      ]
+    },
+    {
+      "id": "supplier_registration",
+      "text": "Đăng ký nhà cung cấp",
+      "type": "folder",
+      "children": [
+        {
+          "id": "init_supplier_registration",
+          "text": "Khởi tạo đăng ký NCC",
+          "type": "document"
+        },
+        {
+          "id": "approve_supplier_registration",
+          "text": "Phê duyệt đăng ký NCC",
+          "type": "document"
+        }
+      ]
+    }
+  ]
+}

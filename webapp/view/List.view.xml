@@ -1,0 +1,45 @@
+<mvc:View
+    displayBlock="true"
+    controllerName="base.controller.List"
+    height="100%"
+    xmlns="sap.m"
+    xmlns:f="sap.f"
+    xmlns:mvc="sap.ui.core.mvc"
+>
+    <f:DynamicPage
+        id="dynamicPageId"
+        toggleHeaderOnTitleClick="false"
+    >
+        <!-- DynamicPage Title -->
+        <f:title>
+            <f:DynamicPageTitle>
+                <f:heading>
+                    <Title
+                        text="Active Queries"
+                    />
+                </f:heading>
+            </f:DynamicPageTitle>
+        </f:title>
+
+        <!-- DynamicPage Content -->
+        <f:content>
+            <Tree
+                id="navtree"
+                items="{
+						path: 'queries>/ActiveQueries',
+						parameters: { arrayNames: ['children'] }
+                }"
+                includeItemInSelection="true"
+                mode="SingleSelectMaster"
+                selectionChange=".onListItemPress"
+            >
+                <StandardTreeItem
+                    title="{queries>text}"
+                    icon="{= ${queries>type} === 'folder' ? 'sap-icon://folder-blank' : 'sap-icon://folder' }"
+                    counter=""
+                />
+            </Tree>
+        </f:content>
+
+    </f:DynamicPage>
+</mvc:View>
