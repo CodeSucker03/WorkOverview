@@ -71,7 +71,7 @@
           "fallbackLocale": ""
         }
       },
-      "steplist": {
+      "": {
         "dataSource": "mainService",
         "preload": true,
         "settings": {}
@@ -99,12 +99,6 @@
       },
       "routes": [
         {
-          "pattern": "test",
-          "name": "test2",
-          "target": "test2",
-          "layout": "OneColumn"
-        },
-        {
           "pattern": "page2",
           "name": "page2",
           "target": "page2",
@@ -119,20 +113,11 @@
           ]
         },
         {
-          "pattern": "detail/{product}/:layout:",
+          "pattern": "detail/{stepId}/{substepId}/:layout:",
           "name": "detail",
           "target": [
             "list",
             "detail"
-          ]
-        },
-        {
-          "pattern": "detailDetail/{product}/{supplier}/:layout:",
-          "name": "detailDetail",
-          "target": [
-            "list",
-            "detail",
-            "detailDetail"
           ]
         }
       ],

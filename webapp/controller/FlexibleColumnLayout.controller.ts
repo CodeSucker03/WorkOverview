@@ -1,13 +1,12 @@
 import type Router from "sap/ui/core/routing/Router";
 import Base from "./Base.controller";
 import type { FlexibleColumnLayout$StateChangeEvent } from "sap/f/FlexibleColumnLayout";
-import type { Route$BeforeMatchedEvent } from "sap/ui/core/routing/Route";
 import type {
   Router$BeforeRouteMatchedEvent,
   Router$RouteMatchedEvent,
 } from "sap/ui/core/routing/Router";
 import type { UIState } from "sap/f/FlexibleColumnLayoutSemanticHelper";
-import type { RouteArguments } from "base/types/pages/main";
+import type { DetailRouteArgs} from "base/types/pages/main";
 
 /**
  * @namespace base.controller
@@ -17,15 +16,15 @@ export default class FlexibleColumnLayout extends Base {
   private Router: Router;
 
   private currentRouteName?: string;
-  private currentProduct?: string;
-  private currentSupplier?: string;
+  private stepId?: string;
+  private substepId?: string;
   private currentLayout?: string;
 
   public override onInit(): void {
     this.Router = this.getRouter();
 
-    this.Router.attachRouteMatched(this.onRouteMatched, this);
-    this.Router.attachBeforeRouteMatched(this.onBeforeRouteMatched, this);
+    this.Router.attachRouteMatched(this.onRouteMatched);
+    this.Router.attachBeforeRouteMatched(this.onBeforeRouteMatched);
 
   }
 
@@ -35,9 +34,9 @@ export default class FlexibleColumnLayout extends Base {
    * Used to set up the initial layout (e.g., OneColumn or TwoColumnsBeginExpanded)
    * before the view is even displayed.
    */
-  private onBeforeRouteMatched(oEvent: Router$BeforeRouteMatchedEvent): void {
+  private onBeforeRouteMatched = (oEvent: Router$BeforeRouteMatchedEvent) => {
     const oModel = this.getModel("layout");
-    const args = <RouteArguments>oEvent.getParameter("arguments");
+    const args = <DetailRouteArgs>oEvent.getParameter("arguments");
     const name = oEvent.getParameter("name");
 
     console.log("layout before route match", args, name);
@@ -55,27 +54,27 @@ export default class FlexibleColumnLayout extends Base {
     if (Layout) {
       oModel?.setProperty("/layout", Layout);
     }
-  }
+  };
 
   /**
    * Triggered when the route is matched.
    * Used to "cache" the current route information so it can be reused later
    * if the user changes the layout manually.
    */
-  private onRouteMatched(oEvent: Router$RouteMatchedEvent): void {
+  private onRouteMatched = (oEvent: Router$RouteMatchedEvent) => {
     const RouteName = oEvent.getParameter("name");
-    const args = <RouteArguments>oEvent.getParameter("arguments");
+    const args = <DetailRouteArgs>oEvent.getParameter("arguments");
     console.log("routematchargs", args.layout, RouteName);
 
     // Store parameters in class variables for use in 'onStateChanged'
     this.currentRouteName = RouteName;
-    this.currentProduct = args?.product;
-    this.currentSupplier = args?.supplier;
+    this.stepId = args?.stepId;
+    this.substepId = args?.substepId;
     this.currentLayout = args?.layout;
 
     // Refresh visibility of action buttons (close/full-screen) based on current state
     this.updateUIElements();
-  }
+  };
 
   /**
    * Triggered when the user interacts with the layout directly and first time load.
@@ -97,8 +96,8 @@ export default class FlexibleColumnLayout extends Base {
         this.currentRouteName,
         {
           layout: Layout,
-          product: this.currentProduct,
-          supplier: this.currentSupplier,
+          stepId: this.stepId,
+          substepId: this.substepId,
         },
         true // Replace history so the back button doesn't get cluttered with layout changes
       );
@@ -121,7 +120,7 @@ export default class FlexibleColumnLayout extends Base {
     Model.setData(oUIState);
 
     // Special 1st navigate case
-    if (this.currentRouteName === "detail" || this.currentRouteName ==="home") {
+    if (this.currentRouteName === "detail") {
       Model.setProperty("/layout", this.currentLayout);
     }
   }

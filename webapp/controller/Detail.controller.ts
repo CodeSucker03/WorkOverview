@@ -2,7 +2,7 @@ import type Router from "sap/ui/core/routing/Router";
 import Base from "./Base.controller";
 import type Model from "sap/ui/model/Model";
 import type { Route$PatternMatchedEvent } from "sap/ui/core/routing/Route";
-import type { DetailRouteArgs } from "base/types/pages/main";
+import type { DetailRouteArgs, QueriesModelData, Step, TreeNode } from "base/types/pages/main";
 import type { ListBase$ItemPressEvent } from "sap/m/ListBase";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import type { FilterPayload } from "base/types/filter";
@@ -20,9 +20,11 @@ import Token from "sap/m/Token";
 import type { FilterBar$FilterChangeEvent } from "sap/ui/comp/filterbar/FilterBar";
 import type FilterGroupItem from "sap/ui/comp/filterbar/FilterGroupItem";
 import Filter from "sap/ui/model/Filter";
-import type Label from "sap/m/Label";
 import type FilterBar from "sap/ui/comp/filterbar/FilterBar";
 import type Table from "sap/ui/table/Table";
+import type Title from "sap/m/Title";
+import type ODataModel from "sap/ui/model/odata/v2/ODataModel";
+import type { ODataError, ODataResponses } from "base/types/odata";
 
 /**
  * @namespace base.controller
@@ -32,11 +34,10 @@ export default class Detail extends Base {
   private Router: Router;
   private Model: Model;
   private FocusFullScreenButton: boolean;
-  private product: string;
 
   // Filter
-  private expandedLabel: Label;
-  private snappedLabel: Label;
+  private expandedLabel: Title;
+  private snappedLabel: Title;
   private filterBar: FilterBar;
   private table: Table;
 
@@ -51,13 +52,13 @@ export default class Detail extends Base {
       new JSONModel({
         // Implement
       }),
-      "master",
+      "master"
     );
 
     // Filters
-    this.expandedLabel = this.getControlById<Label>("expandedLabel");
-    this.snappedLabel = this.getControlById<Label>("snappedLabel");
-    this.filterBar = this.getControlById<FilterBar>("filterBar");
+    this.expandedLabel = this.getControlById<Title>("expandedLabelA");
+    this.snappedLabel = this.getControlById<Title>("snappedLabelA");
+    this.filterBar = this.getControlById<FilterBar>("filterbarA");
 
     // Filter initialize
     this.filterBar.registerFetchData(this.fetchData);
@@ -67,141 +68,178 @@ export default class Detail extends Base {
     // Attach a listener to multiple routes.
     // This ensures that whether the user is on the List, Detail, or Sub-detail page,
     // bind the correct element to the detaiol view.
-    this.Router.getRoute("list")?.attachPatternMatched(
-      this.onProductMatched,
-      this,
-    );
-    this.Router.getRoute("detail")?.attachPatternMatched(
-      this.onProductMatched,
-      this,
-    );
-    this.Router.getRoute("detailDetail")?.attachPatternMatched(
-      this.onProductMatched,
-      this,
-    );
+    this.Router.getRoute("list")?.attachPatternMatched(this.onProductMatched);
+    this.Router.getRoute("detail")?.attachPatternMatched(this.onProductMatched);
+    this.Router.getRoute("detailDetail")?.attachPatternMatched(this.onProductMatched);
   }
 
-  public handleItemPress(oEvent: ListBase$ItemPressEvent) {
-    console.log(oEvent.getSource().getMetadata().getName());
+  public handleItemPress(Event: ListBase$ItemPressEvent) {
+    console.log(Event.getSource().getMetadata().getName());
     let oNextUIState = this.getComponent().getFCLHelper().getNextUIState(2);
 
-    let bindingContext = oEvent
-      .getParameter("listItem")
-      ?.getBindingContext("products");
+    let bindingContext = Event.getParameter("listItem")?.getBindingContext("products");
     let supplierPath = bindingContext?.getPath() || "";
-
-    // Extract the ID/index from the end of the path (e.g., "products/5" -> "5")
-    let supplier = supplierPath.split("/").slice(-1).pop();
-
-    console.log(
-      "Detailed pressed",
-      supplierPath,
-      supplier,
-      oNextUIState.layout,
-    );
-
-    this.Router.navTo("detailDetail", {
-      layout: oNextUIState.layout,
-      product: this.product,
-      supplier: supplier,
-    });
   }
 
-  public onProductMatched(oEvent: Route$PatternMatchedEvent) {
-    const args = oEvent.getParameter("arguments") as DetailRouteArgs;
+  public onProductMatched = (Event: Route$PatternMatchedEvent) => {
+    this.getMetadataLoaded()
+      .then(() => this.onGetStepData())
+      .then(() => {
+        const args = <DetailRouteArgs>Event.getParameter("arguments");
 
-    this.product = args.product || this.product || "0";
+        const StepId = args.stepId;
+        const SubstepId = args.substepId;
 
-    // fix detail route to have 3 parameters step substeps desc ?
-    this.getView()?.bindElement({
-      path: "/ActiveQueries/" + this.product,
-      model: "queries",
+        const oModel = this.getModel("queries");
+        const Data = <TreeNode[]>oModel.getProperty("/ActiveQueries") || [];
+
+        console.log(Data);
+        // 1. Find the Parent Index
+        const StepIdx = Data.findIndex((step) => step.id === StepId);
+
+        // 2. Find the Substep Index within that parent
+        const Children = Data[StepIdx]?.children || [];
+        const SubIdx = Children.findIndex((sub) => sub.id === SubstepId);
+
+        // 3. Construct the nested path
+        const ResolvedPath = `/ActiveQueries/${StepIdx}/children/${SubIdx}`;
+        console.log(ResolvedPath);
+
+        this.getView()?.bindElement({
+          path: ResolvedPath,
+          model: "queries",
+        });
+
+        this.filterBar.fireSearch();
+      })
+      .catch((error) => {
+        console.log(error);
+      })
+      .finally(() => {
+        // loading off
+      });
+  };
+
+  private onGetStepData() {
+    return new Promise((resolve, reject) => {
+      const oModel = this.getModel<ODataModel>();
+
+      const jsonModel = this.getModel("queries");
+
+      oModel.read("/StepListSet", {
+        urlParameters: {
+          $expand: "ToSubstepList",
+        },
+        success: (oData: ODataResponses) => {
+          const Steps = <Step[]>oData.results || [];
+
+          // Map response to jsonModel
+          const FormattedTree = Steps.map((Step) => {
+            return {
+              text: Step.StepDescr, // Parent title
+              type: "folder",
+              id: Step.Step,
+              // Map substeps to the 'children' property
+              children: (Step.ToSubstepList?.results || []).map((Sub) => {
+                return {
+                  text: Sub.SubstepDescr, // Child title
+                  type: "document",
+                  id: Sub.Substep,
+                  // CRITICAL: Child nodes must store their parent's ID for routing
+                  stepId: Step.Step,
+                  children: [], // tasks nodes
+                };
+              }),
+            };
+          });
+
+          jsonModel.setProperty("/ActiveQueries", FormattedTree);
+
+          resolve(true);
+        },
+        error: (error: ODataError) => {
+          reject(error);
+        },
+      });
     });
   }
-
-  private flattenList() {}
 
   // #region Filters
   /**
    * Get value fields to create new filter variant
    */
   private fetchData = () => {
-    return this.filterBar
-      .getAllFilterItems(false)
-      .reduce<FilterPayload[]>((acc, item: FilterGroupItem) => {
-        const control = item.getControl();
-        const groupName = item.getGroupName();
-        const fieldName = item.getName();
+    return this.filterBar.getAllFilterItems(false).reduce<FilterPayload[]>((acc, item: FilterGroupItem) => {
+      const control = item.getControl();
+      const groupName = item.getGroupName();
+      const fieldName = item.getName();
 
-        if (control) {
-          let fieldData: string | string[] = "";
+      if (control) {
+        let fieldData: string | string[] = "";
 
-          switch (true) {
-            case this.isControl<Input>(control, "sap.m.Input"): {
-              fieldData = control.getValue();
-              break;
-            }
-
-            case this.isControl<TextArea>(control, "sap.m.TextArea"): {
-              fieldData = control.getValue();
-              break;
-            }
-
-            case this.isControl<MultiInput>(control, "sap.m.MultiInput"): {
-              fieldData = control.getTokens().map((token) => token.getKey());
-              break;
-            }
-
-            case this.isControl<DatePicker>(control, "sap.m.DatePicker"): {
-              fieldData = control.getValue();
-              break;
-            }
-
-            case this.isControl<TimePicker>(control, "sap.m.TimePicker"): {
-              fieldData = control.getValue();
-              break;
-            }
-
-            case this.isControl<MultiComboBox>(
-              control,
-              "sap.m.MultiComboBox",
-            ): {
-              fieldData = control.getSelectedKeys();
-              break;
-            }
-
-            case this.isControl<Select>(control, "sap.m.Select"): {
-              fieldData = control.getSelectedKey();
-              break;
-            }
-
-            case this.isControl<ComboBox>(control, "sap.m.ComboBox"): {
-              fieldData = control.getSelectedKey();
-              break;
-            }
-
-            case this.isControl<CheckBox>(control, "sap.m.CheckBox"): {
-              fieldData = control.getSelected().toString();
-              break;
-            }
-
-            case this.isControl<Switch>(control, "sap.m.Switch"): {
-              fieldData = control.getState().toString();
-              break;
-            }
-            default:
-              break;
+        switch (true) {
+          case this.isControl<Input>(control, "sap.m.Input"): {
+            fieldData = control.getValue();
+            break;
           }
 
-          acc.push({
-            groupName,
-            fieldName,
-            fieldData,
-          });
+          case this.isControl<TextArea>(control, "sap.m.TextArea"): {
+            fieldData = control.getValue();
+            break;
+          }
+
+          case this.isControl<MultiInput>(control, "sap.m.MultiInput"): {
+            fieldData = control.getTokens().map((token) => token.getKey());
+            break;
+          }
+
+          case this.isControl<DatePicker>(control, "sap.m.DatePicker"): {
+            fieldData = control.getValue();
+            break;
+          }
+
+          case this.isControl<TimePicker>(control, "sap.m.TimePicker"): {
+            fieldData = control.getValue();
+            break;
+          }
+
+          case this.isControl<MultiComboBox>(control, "sap.m.MultiComboBox"): {
+            fieldData = control.getSelectedKeys();
+            break;
+          }
+
+          case this.isControl<Select>(control, "sap.m.Select"): {
+            fieldData = control.getSelectedKey();
+            break;
+          }
+
+          case this.isControl<ComboBox>(control, "sap.m.ComboBox"): {
+            fieldData = control.getSelectedKey();
+            break;
+          }
+
+          case this.isControl<CheckBox>(control, "sap.m.CheckBox"): {
+            fieldData = control.getSelected().toString();
+            break;
+          }
+
+          case this.isControl<Switch>(control, "sap.m.Switch"): {
+            fieldData = control.getState().toString();
+            break;
+          }
+          default:
+            break;
         }
 
-        return acc;
-      }, []);
+        acc.push({
+          groupName,
+          fieldName,
+          fieldData,
+        });
+      }
+
+      return acc;
+    }, []);
   };
 
   /**
@@ -210,10 +248,7 @@ export default class Detail extends Base {
   private applyData = (data: unknown) => {
     (<FilterPayload[]>data).forEach((item) => {
       const { groupName, fieldName, fieldData } = item;
-      const control = this.filterBar.determineControlByName(
-        fieldName,
-        groupName,
-      );
+      const control = this.filterBar.determineControlByName(fieldName, groupName);
 
       switch (true) {
         case this.isControl<Input>(control, "sap.m.Input"): {
@@ -227,9 +262,7 @@ export default class Detail extends Base {
         }
 
         case this.isControl<MultiInput>(control, "sap.m.MultiInput"): {
-          const tokens = (<string[]>fieldData).map(
-            (key) => new Token({ key, text: key }),
-          );
+          const tokens = (<string[]>fieldData).map((key) => new Token({ key, text: key }));
           control.setTokens(tokens);
           break;
         }
@@ -276,112 +309,107 @@ export default class Detail extends Base {
 
   // Get filters with values to display in labels
   private getFiltersWithValues = () => {
-    return this.filterBar
-      .getFilterGroupItems()
-      .reduce<FilterGroupItem[]>((acc, item) => {
-        const control = item.getControl();
+    return this.filterBar.getFilterGroupItems().reduce<FilterGroupItem[]>((acc, item) => {
+      const control = item.getControl();
 
-        if (control) {
-          switch (true) {
-            case this.isControl<Input>(control, "sap.m.Input"): {
-              const value = control.getValue();
+      if (control) {
+        switch (true) {
+          case this.isControl<Input>(control, "sap.m.Input"): {
+            const value = control.getValue();
 
-              if (value) {
-                acc.push(item);
-              }
-              break;
+            if (value) {
+              acc.push(item);
             }
-
-            case this.isControl<TextArea>(control, "sap.m.TextArea"): {
-              const value = control.getValue();
-
-              if (value) {
-                acc.push(item);
-              }
-              break;
-            }
-
-            case this.isControl<MultiInput>(control, "sap.m.MultiInput"): {
-              const tokens = control.getTokens();
-
-              if (tokens.length) {
-                acc.push(item);
-              }
-              break;
-            }
-
-            case this.isControl<DatePicker>(control, "sap.m.DatePicker"): {
-              const value = control.getValue();
-
-              if (value) {
-                acc.push(item);
-              }
-              break;
-            }
-
-            case this.isControl<TimePicker>(control, "sap.m.TimePicker"): {
-              const value = control.getValue();
-
-              if (value) {
-                acc.push(item);
-              }
-              break;
-            }
-
-            case this.isControl<MultiComboBox>(
-              control,
-              "sap.m.MultiComboBox",
-            ): {
-              const keys = control.getSelectedKeys();
-
-              if (keys.length) {
-                acc.push(item);
-              }
-              break;
-            }
-
-            case this.isControl<Select>(control, "sap.m.Select"): {
-              const key = control.getSelectedKey();
-
-              if (key) {
-                acc.push(item);
-              }
-              break;
-            }
-
-            case this.isControl<ComboBox>(control, "sap.m.ComboBox"): {
-              const key = control.getSelectedKey();
-
-              if (key) {
-                acc.push(item);
-              }
-              break;
-            }
-
-            case this.isControl<CheckBox>(control, "sap.m.CheckBox"): {
-              const value = control.getSelected().toString();
-
-              if (value) {
-                acc.push(item);
-              }
-              break;
-            }
-
-            case this.isControl<Switch>(control, "sap.m.Switch"): {
-              const value = control.getState().toString();
-
-              if (value) {
-                acc.push(item);
-              }
-              break;
-            }
-            default:
-              break;
+            break;
           }
-        }
 
-        return acc;
-      }, []);
+          case this.isControl<TextArea>(control, "sap.m.TextArea"): {
+            const value = control.getValue();
+
+            if (value) {
+              acc.push(item);
+            }
+            break;
+          }
+
+          case this.isControl<MultiInput>(control, "sap.m.MultiInput"): {
+            const tokens = control.getTokens();
+
+            if (tokens.length) {
+              acc.push(item);
+            }
+            break;
+          }
+
+          case this.isControl<DatePicker>(control, "sap.m.DatePicker"): {
+            const value = control.getValue();
+
+            if (value) {
+              acc.push(item);
+            }
+            break;
+          }
+
+          case this.isControl<TimePicker>(control, "sap.m.TimePicker"): {
+            const value = control.getValue();
+
+            if (value) {
+              acc.push(item);
+            }
+            break;
+          }
+
+          case this.isControl<MultiComboBox>(control, "sap.m.MultiComboBox"): {
+            const keys = control.getSelectedKeys();
+
+            if (keys.length) {
+              acc.push(item);
+            }
+            break;
+          }
+
+          case this.isControl<Select>(control, "sap.m.Select"): {
+            const key = control.getSelectedKey();
+
+            if (key) {
+              acc.push(item);
+            }
+            break;
+          }
+
+          case this.isControl<ComboBox>(control, "sap.m.ComboBox"): {
+            const key = control.getSelectedKey();
+
+            if (key) {
+              acc.push(item);
+            }
+            break;
+          }
+
+          case this.isControl<CheckBox>(control, "sap.m.CheckBox"): {
+            const value = control.getSelected().toString();
+
+            if (value) {
+              acc.push(item);
+            }
+            break;
+          }
+
+          case this.isControl<Switch>(control, "sap.m.Switch"): {
+            const value = control.getState().toString();
+
+            if (value) {
+              acc.push(item);
+            }
+            break;
+          }
+          default:
+            break;
+        }
+      }
+
+      return acc;
+    }, []);
   };
 
   public onSelectionChange(event: FilterBar$FilterChangeEvent) {
@@ -397,8 +425,7 @@ export default class Detail extends Base {
   }
 
   private updateLabelsAndTable() {
-    const expandedLabel =
-      this.filterBar.retrieveFiltersWithValuesAsTextExpanded();
+    const expandedLabel = this.filterBar.retrieveFiltersWithValuesAsTextExpanded();
     const snappedLabel = this.filterBar.retrieveFiltersWithValuesAsText();
 
     this.expandedLabel.setText(expandedLabel);
@@ -408,78 +435,62 @@ export default class Detail extends Base {
   }
 
   public getFilters() {
-    const filters = this.filterBar
-      .getFilterGroupItems()
-      .reduce<Filter[]>((acc, item) => {
-        const control = item.getControl();
-        const name = item.getName();
+    const filters = this.filterBar.getFilterGroupItems().reduce<Filter[]>((acc, item) => {
+      const control = item.getControl();
+      const name = item.getName();
 
-        switch (true) {
-          case this.isControl<Input>(control, "sap.m.Input"):
-          case this.isControl<TextArea>(control, "sap.m.TextArea"): {
-            const value = control.getValue();
+      switch (true) {
+        case this.isControl<Input>(control, "sap.m.Input"):
+        case this.isControl<TextArea>(control, "sap.m.TextArea"): {
+          const value = control.getValue();
 
-            if (value) {
-              acc.push(new Filter(name, "Contains", value));
-            }
-
-            break;
+          if (value) {
+            acc.push(new Filter(name, "Contains", value));
           }
 
-          case this.isControl<DatePicker>(control, "sap.m.DatePicker"):
-          case this.isControl<TimePicker>(control, "sap.m.TimePicker"): {
-            const value = control.getValue();
-
-            if (value) {
-              acc.push(new Filter(name, "EQ", value));
-            }
-
-            break;
-          }
-
-          case this.isControl<Select>(control, "sap.m.Select"):
-          case this.isControl<ComboBox>(control, "sap.m.ComboBox"): {
-            const value = control.getSelectedKey();
-
-            if (value) {
-              acc.push(new Filter(name, "EQ", value));
-            }
-
-            break;
-          }
-          default:
-            break;
+          break;
         }
 
-        return acc;
-      }, []);
+        case this.isControl<DatePicker>(control, "sap.m.DatePicker"):
+        case this.isControl<TimePicker>(control, "sap.m.TimePicker"): {
+          const value = control.getValue();
+
+          if (value) {
+            acc.push(new Filter(name, "EQ", value));
+          }
+
+          break;
+        }
+
+        case this.isControl<Select>(control, "sap.m.Select"):
+        case this.isControl<ComboBox>(control, "sap.m.ComboBox"): {
+          const value = control.getSelectedKey();
+
+          if (value) {
+            acc.push(new Filter(name, "EQ", value));
+          }
+
+          break;
+        }
+        default:
+          break;
+      }
+
+      return acc;
+    }, []);
 
     return filters;
   }
+
+  public onSearch() {
+    const oDataModel = this.getModel<ODataModel>();
+    const tableModel = this.getModel<JSONModel>("table");
+
+    const filters = this.getFilters();
+
+    this.table.setBusy(true);
+
+    this.table.setShowOverlay(false);
+  }
   // #endregion Filters
-
-  // #region extras
-  public handleFullScreen() {
-    this.FocusFullScreenButton = true;
-    let NextLayout = this.Model.getProperty(
-      "/actionButtonsInfo/midColumn/fullScreen",
-    );
-    this.Router.navTo("detail", { layout: NextLayout, product: this.product });
-  }
-
-  public handleExitFullScreen() {
-    this.FocusFullScreenButton = true;
-    let NextLayout = this.Model.getProperty(
-      "/actionButtonsInfo/midColumn/exitFullScreen",
-    );
-    this.Router.navTo("detail", { layout: NextLayout, product: this.product });
-  }
-
-  public handleClose() {
-    let NextLayout = this.Model.getProperty(
-      "/actionButtonsInfo/midColumn/closeColumn",
-    );
-    this.Router.navTo("list", { layout: NextLayout });
-  }
-  // #endregion extras
 }

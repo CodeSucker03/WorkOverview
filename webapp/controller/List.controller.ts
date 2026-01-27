@@ -9,8 +9,7 @@ import type { Route$PatternMatchedEvent } from "sap/ui/core/routing/Route";
 import type { ListBase$ItemPressEvent } from "sap/m/ListBase";
 import type ListBinding from "sap/ui/model/ListBinding";
 import type { SearchField$SearchEvent } from "sap/m/SearchField";
-import type { DetailRouteArgs, Step } from "base/types/pages/main";
-import JSONModel from "sap/ui/model/json/JSONModel";
+import type { Step, TreeNode } from "base/types/pages/main";
 import Tree from "sap/m/Tree";
 import ODataModel from "sap/ui/model/odata/v2/ODataModel";
 import type { ODataError, ODataResponses } from "base/types/odata";
@@ -22,46 +21,26 @@ import type { ODataError, ODataResponses } from "base/types/odata";
 export default class ListController extends Base {
   private Router!: Router;
   private DescendingSort: boolean;
-  private product = "0";
 
   override onInit(): void {
     this.Router = this.getRouter();
 
     this.DescendingSort = false;
 
-
-    const oData = new JSONModel();
-    this.setModel(oData, "queries");
-
-    oData.attachRequestCompleted(() => {
-      const Tree = this.getControlById<Tree>("navtree");
-      Tree?.expandToLevel(99);
-    });
-
     // Attach a listener to multiple routes.
     // This ensures that whether the user is on the List, Detail, or Sub-detail page,
     // the list highlights the correct active product.
-    this.Router.getRoute("list")?.attachPatternMatched(
-      this.onProductMatched,
-      this,
-    );
-    this.Router.getRoute("detail")?.attachPatternMatched(
-      this.onProductMatched,
-      this,
-    );
-    this.Router.getRoute("detailDetail")?.attachPatternMatched(
-      this.onProductMatched,
-      this,
-    );
+    this.Router.getRoute("list")?.attachPatternMatched(this.onProductMatched);
+    this.Router.getRoute("detail")?.attachPatternMatched(this.onProductMatched);
+    this.Router.getRoute("detailDetail")?.attachPatternMatched(this.onProductMatched);
 
-    // Init Nav
+    // Init Navigate
     this.Router.navTo("detail", {
       layout: "TwoColumnsMidExpanded",
-      product: "b1_init_procurement_needs",
+      stepId: "STEP01",
+      substepId: "SSTEP1.1",
     });
   }
-
-  private flattenList() {}
 
   // Detail Nav
   public onListItemPress(oEvent: ListBase$ItemPressEvent): void {
@@ -77,16 +56,19 @@ export default class ListController extends Base {
     if (!ctx) {
       return;
     }
+    const Node = ctx.getObject() as TreeNode;
 
-    const productPath = ctx.getPath();
-    console.log("Path", productPath);
-
-    this.Router.navTo("detail", {
-      layout: NextUIState.layout,
-      produc: 1,
-    });
+    // Only navigate if it's a document (substep)
+    if (Node.type === "document") {
+      this.Router.navTo("detail", {
+        layout: "TwoColumnsMidExpanded",
+        stepId: Node.stepId, // Extracted from the mapping we did earlier
+        substepId: Node.id, // The specific substep ID (e.g., SSTEP1.1)
+      });
+    }
   }
 
+  // Search in list
   public onSearch(oEvent: SearchField$SearchEvent): void {
     const query = oEvent.getParameter("query") ?? "";
     const filters: Filter[] = [];
@@ -123,42 +105,64 @@ export default class ListController extends Base {
     binding.sort(sorter);
   }
 
-  private onProductMatched(Event: Route$PatternMatchedEvent): void {
-    const oModel = this.getModel<ODataModel>("steplist");
+  private onProductMatched = (Event: Route$PatternMatchedEvent) => {
+    this.getMetadataLoaded()
+      .then(() => this.onGetStepData())
+      .then(() => {
+        const tree = this.getControlById<Tree>("navtree");
+        tree.expandToLevel(99);
+      })
+      .catch((error) => {
+        console.log(error);
+      })
+      .finally(() => {
+        // loading off
+      });
+  };
 
-    const jsonModel = this.getModel("queries");
+  private onGetStepData() {
+    return new Promise((resolve, reject) => {
+      const oModel = this.getModel<ODataModel>();
 
-    oModel.read("/StepListSet", {
-      urlParameters: {
-        $expand: "ToSubstepList",
-      },
-      success: (oData: ODataResponses) => {
-        const Steps = <Step[]>oData.results || [];
+      const jsonModel = this.getModel("queries");
 
-        const FormattedTree = Steps.map((Step) => {
-          return {
-            text: Step.StepDescr, // Parent title
-            type: "folder",
-            // Map substeps to the 'children' property
-            children: (Step.ToSubstepList?.results || []).map((Sub) => {
-              return {
-                text: Sub.SubstepDescr, // Child title
-                type: "document",
-                children: [], // tasks nodes
-              };
-            }),
-          };
-        });
+      oModel.read("/StepListSet", {
+        urlParameters: {
+          $expand: "ToSubstepList",
+        },
+        success: (oData: ODataResponses) => {
+          const Steps = <Step[]>oData.results || [];
 
-        jsonModel.setProperty("/ActiveQueries", FormattedTree);
+          // Map response to jsonModel
+          const FormattedTree = Steps.map((Step) => {
+            return {
+              text: Step.StepDescr, // Parent title
+              type: "folder",
+              id: Step.Step,
+              // Map substeps to the 'children' property
+              children: (Step.ToSubstepList?.results || []).map((Sub) => {
+                return {
+                  text: Sub.SubstepDescr, // Child title
+                  type: "document",
+                  id: Sub.Substep,
+                  // CRITICAL: Child nodes must store their parent's ID for routing
+                  stepId: Step.Step,
+                  children: [], // tasks nodes
+                };
+              }),
+            };
+          });
 
-        const Tree = this.getControlById<Tree>("navtree");
-        Tree?.expandToLevel(99);
-      },
-      error: (oError: ODataError) => {
-        const errorMessage = oError.message || "Đã có lỗi xảy ra";
-        MessageBox.error(errorMessage);
-      },
+          jsonModel.setProperty("/ActiveQueries", FormattedTree);
+
+          resolve(true);
+        },
+        error: (error: ODataError) => {
+          const errorMessage = error.message || "Đã có lỗi xảy ra";
+          MessageBox.error(errorMessage);
+          reject(error);
+        },
+      });
     });
   }
 }

@@ -36,7 +36,7 @@ export default class Component extends BaseComponent {
         MessageTitle: "",
         MessageDescription: "",
       }),
-      "global",
+      "global"
     );
 
     // Message manager
@@ -48,15 +48,15 @@ export default class Component extends BaseComponent {
 
     this.setModel(this.MessageManager.getMessageModel(), "message");
 
-    
     let oModel = new JSONModel();
-    console.log(oModel);
-    this.setModel(oModel,"layout");
+    this.setModel(oModel, "layout");
 
+    // Steps Model
+    let jsonModel = new JSONModel();
+    this.setModel(jsonModel, "queries");
+    
     // Fake data
-    const productsModel = new JSONModel(
-      sap.ui.require.toUrl("base/mockdata/products.json"),
-    );
+    const productsModel = new JSONModel(sap.ui.require.toUrl("base/mockdata/products.json"));
 
     this.setModel(productsModel, "products");
 
@@ -103,8 +103,7 @@ export default class Component extends BaseComponent {
       return {};
     }
 
-    const parameters = (<ComponentData>this.getComponentData())
-      .startupParameters;
+    const parameters = (<ComponentData>this.getComponentData()).startupParameters;
 
     const values = Object.keys(parameters).reduce<Dict>((acc, key) => {
       acc[key] = parameters[key][0];

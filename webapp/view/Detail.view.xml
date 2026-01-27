@@ -14,15 +14,17 @@
         <f:title>
             <f:DynamicPageTitle>
                 <f:expandedContent>
-                    <Label
+                    <Title
                         id="expandedLabelA"
                         text="{queries>text}"
+                        titleStyle="H4"
                     />
                 </f:expandedContent>
                 <f:snappedContent>
-                    <Label
+                    <Title
                         id="snappedLabelA"
-                        text="{queries>text} (Snapped)"
+                        text="{queries>text}"
+                        titleStyle="H4"
                     />
                 </f:snappedContent>
             </f:DynamicPageTitle>
