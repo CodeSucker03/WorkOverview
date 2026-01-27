@@ -57,8 +57,9 @@ export interface ToSubstepList {
  * Interface for the main Step items (Level 1)
  */
 export interface Step {
-  __metadata: ODataMetadata;
+  __metadata?: ODataMetadata;
   Step: string; // e.g., "STEP01"
+  type: "folder" | "document";
   StepDescr: string; // e.g., "PHÊ DUYỆT ĐẦU BÀI CHI TIẾT"
   ToSubstepList: ToSubstepList;
 }
@@ -74,7 +75,7 @@ export interface TreeNode {
   // stepId is optional because parents (Folders) don't have a parent stepId
   stepId?: string;
   // Recursive property: children contains more ITreeNode objects
-  children: TreeNode[];
+  SubStepList: TreeNode[];
 }
 
 /**

@@ -10,7 +10,7 @@ import type { ComponentData, Dict } from "./types/utils";
 import type Control from "sap/ui/core/Control";
 import Messaging from "sap/ui/core/Messaging";
 import type MessageProcessor from "sap/ui/core/message/MessageProcessor";
-import type { ErrorHandler } from "./controller/ErrorHandler";
+import { ErrorHandler } from "./controller/ErrorHandler";
 import ControlMessageProcessor from "sap/ui/core/message/ControlMessageProcessor";
 
 /**
@@ -44,7 +44,7 @@ export default class Component extends BaseComponent {
     this.MessageProcessor = new ControlMessageProcessor();
     this.MessageManager.registerMessageProcessor(this.MessageProcessor);
 
-    // this.ErrorHandler = new ErrorHandler(this);
+    this.ErrorHandler = new ErrorHandler(this);
 
     this.setModel(this.MessageManager.getMessageModel(), "message");
 
@@ -54,13 +54,7 @@ export default class Component extends BaseComponent {
     // Steps Model
     let jsonModel = new JSONModel();
     this.setModel(jsonModel, "queries");
-    
-    // Fake data
-    const productsModel = new JSONModel(sap.ui.require.toUrl("base/mockdata/products.json"));
 
-    this.setModel(productsModel, "products");
-
-    // end fake data
 
     // enable routing
     this.getRouter().initialize();

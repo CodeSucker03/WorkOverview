@@ -32,7 +32,6 @@ export default class ListController extends Base {
     // the list highlights the correct active product.
     this.Router.getRoute("list")?.attachPatternMatched(this.onProductMatched);
     this.Router.getRoute("detail")?.attachPatternMatched(this.onProductMatched);
-    this.Router.getRoute("detailDetail")?.attachPatternMatched(this.onProductMatched);
 
     // Init Navigate
     this.Router.navTo("detail", {
@@ -120,49 +119,50 @@ export default class ListController extends Base {
       });
   };
 
+  // #region GetSteps
   private onGetStepData() {
-    return new Promise((resolve, reject) => {
-      const oModel = this.getModel<ODataModel>();
+    // return new Promise((resolve, reject) => {
+    //   const oModel = this.getModel<ODataModel>();
 
-      const jsonModel = this.getModel("queries");
+    //   const jsonModel = this.getModel("queries");
 
-      oModel.read("/StepListSet", {
-        urlParameters: {
-          $expand: "ToSubstepList",
-        },
-        success: (oData: ODataResponses) => {
-          const Steps = <Step[]>oData.results || [];
+    //   oModel.read("/StepListSet", {
+    //     urlParameters: {
+    //       $expand: "ToSubstepList",
+    //     },
+    //     success: (oData: ODataResponses) => {
+    //       const Steps = <Step[]>oData.results || [];
 
-          // Map response to jsonModel
-          const FormattedTree = Steps.map((Step) => {
-            return {
-              text: Step.StepDescr, // Parent title
-              type: "folder",
-              id: Step.Step,
-              // Map substeps to the 'children' property
-              children: (Step.ToSubstepList?.results || []).map((Sub) => {
-                return {
-                  text: Sub.SubstepDescr, // Child title
-                  type: "document",
-                  id: Sub.Substep,
-                  // CRITICAL: Child nodes must store their parent's ID for routing
-                  stepId: Step.Step,
-                  children: [], // tasks nodes
-                };
-              }),
-            };
-          });
+    //       // Map response to jsonModel
+    //       const FormattedTree = Steps.map((Step) => {
+    //         return {
+    //           text: Step.StepDescr, // Parent title
+    //           type: "folder",
+    //           id: Step.Step,
+    //           // Map substeps to the 'children' property
+    //           SubStepList: (Step.ToSubstepList?.results || []).map((Sub) => {
+    //             return {
+    //               text: Sub.SubstepDescr, // Child title
+    //               type: "document",
+    //               id: Sub.Substep,
+    //               // CRITICAL: Child nodes must store their parent's ID for routing
+    //               stepId: Step.Step,
+    //               TaskList: [], // tasks nodes
+    //             };
+    //           }),
+    //         };
+    //       });
 
-          jsonModel.setProperty("/ActiveQueries", FormattedTree);
+    //       jsonModel.setProperty("/ActiveQueries", FormattedTree);
 
-          resolve(true);
-        },
-        error: (error: ODataError) => {
-          const errorMessage = error.message || "Đã có lỗi xảy ra";
-          MessageBox.error(errorMessage);
-          reject(error);
-        },
-      });
-    });
+    //       resolve(true);
+    //     },
+    //     error: (error: ODataError) => {
+    //       const errorMessage = error.message || "Đã có lỗi xảy ra";
+    //       MessageBox.error(errorMessage);
+    //       reject(error);
+    //     },
+    //   });
+    // });
   }
 }

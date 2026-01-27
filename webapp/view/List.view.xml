@@ -16,6 +16,7 @@
                 <f:heading>
                     <Title
                         text="Active Queries"
+                        titleStyle="H5"
                     />
                 </f:heading>
             </f:DynamicPageTitle>
@@ -27,7 +28,7 @@
                 id="navtree"
                 items="{
 						path: 'queries>/ActiveQueries',
-						parameters: { arrayNames: ['children'] }
+						parameters: { arrayNames: ['SubStepList'] }
                 }"
                 includeItemInSelection="true"
                 mode="SingleSelectMaster"
@@ -40,6 +41,5 @@
                 />
             </Tree>
         </f:content>
-
     </f:DynamicPage>
 </mvc:View>

@@ -64,7 +64,20 @@
                                         id="filterFrom"
                                         forceSelection="false"
                                         width="100%"
-                                    />
+                                    >
+                                        <core:Item
+                                            key=""
+                                            text="All"
+                                        />
+                                        <core:Item
+                                            key="SYSTEM"
+                                            text="System"
+                                        />
+                                        <core:Item
+                                            key="USER"
+                                            text="User"
+                                        />
+                                    </Select>
                                 </fb:control>
                             </fb:FilterGroupItem>
 
@@ -93,7 +106,48 @@
                                         id="filterPriority"
                                         forceSelection="false"
                                         width="100%"
-                                    />
+                                    >
+                                        <core:Item
+                                            key=""
+                                            text="All"
+                                        />
+                                        <core:Item
+                                            key="1"
+                                            text="1 - Highest (Express)"
+                                        />
+                                        <core:Item
+                                            key="2"
+                                            text="2 - Very High"
+                                        />
+                                        <core:Item
+                                            key="3"
+                                            text="3 - Higher"
+                                        />
+                                        <core:Item
+                                            key="4"
+                                            text="4 - High"
+                                        />
+                                        <core:Item
+                                            key="5"
+                                            text="5 - Medium"
+                                        />
+                                        <core:Item
+                                            key="6"
+                                            text="6 - Low"
+                                        />
+                                        <core:Item
+                                            key="7"
+                                            text="7 - Lower"
+                                        />
+                                        <core:Item
+                                            key="8"
+                                            text="8 - Very Low"
+                                        />
+                                        <core:Item
+                                            key="9"
+                                            text="9 - Lowest"
+                                        />
+                                    </Select>
                                 </fb:control>
                             </fb:FilterGroupItem>
 
@@ -122,7 +176,56 @@
                                         id="filterStatus"
                                         forceSelection="false"
                                         width="100%"
-                                    />
+                                    >
+                                        <core:Item
+                                            key=""
+                                            text="All"
+                                        />
+                                        <core:Item
+                                            key="WAITING"
+                                            text="Waiting"
+                                        />
+                                        <core:Item
+                                            key="READY"
+                                            text="Ready"
+                                        />
+                                        <core:Item
+                                            key="SELECTED"
+                                            text="Accepted"
+                                        />
+                                        <core:Item
+                                            key="STARTED"
+                                            text="In Process"
+                                        />
+                                        <core:Item
+                                            key="ERROR"
+                                            text="Error"
+                                        />
+                                        <core:Item
+                                            key="COMMITTED"
+                                            text="Executed"
+                                        />
+                                        <core:Item
+                                            key="COMPLETED"
+                                            text="Completed"
+                                        />
+                                        <core:Item
+                                            key="CANCELLED"
+                                            text="Logically Deleted"
+                                        />
+                                        <core:Item
+                                            key="CHECKED"
+                                            text="In Preparation"
+                                        />
+                                        <core:Item
+                                            key="EXCPCAUGHT"
+                                            text="Exception Caught"
+                                        />
+                                        <core:Item
+                                            key="EXCPHANDLR"
+                                            text="Exception Active"
+                                        />
+                                    </Select>
                                 </fb:control>
                             </fb:FilterGroupItem>
 
@@ -148,7 +251,7 @@
         <f:content>
             <table:Table
                 id="table"
-                rows="{products>/ProductCollection}"
+                rows="{table>/Rows}"
                 selectionMode="MultiToggle"
             >
                 <table:extension>
@@ -189,28 +292,77 @@
                     </OverflowToolbar>
                 </table:extension>
                 <table:columns>
-                    <table:Column>
-                        <Label text="Product Id" />
+                    <table:Column
+                        filterProperty="WiText"
+                        sortProperty="WiText"
+                        width="15rem"
+                    >
+                        <Label text="Subject" />
                         <table:template>
-                            <Input value="{products>ProductId}" />
+                            <Text
+                                text="{table>TaskDescr}"
+                                wrapping="false"
+                            />
                         </table:template>
                     </table:Column>
-                    <table:Column>
-                        <Label text="Name" />
+                    
+                    <table:Column width="10rem">
+                        <Label text="TaskID" />
                         <table:template>
-                            <Text text="{products>Name}" />
+                            <Text text="{table>Task}" />
                         </table:template>
                     </table:Column>
-                    <table:Column>
-                        <Label text="Category" />
+
+                    <table:Column width="10rem">
+                        <Label text="From" />
                         <table:template>
-                            <Text text="{products>Category}" />
+                            <Text text="{table>Mancc}" />
                         </table:template>
                     </table:Column>
-                    <table:Column>
-                        <Label text="SupplierName" />
+
+                    <table:Column width="10rem">
+                        <Label text="Sent on" />
                         <table:template>
-                            <Text text="{products>SupplierName}" />
+                            <Text text="{table>WiCd}" />
+                        </table:template>
+                    </table:Column>
+
+                    <table:Column width="8rem">
+                        <Label text="Priority" />
+                        <table:template>
+                            <ObjectStatus
+                                text="{
+                                    path: 'table>WiPrio',
+                                    formatter: '.priorityText'
+                                }"
+                                state="{
+                                    path: 'table>WiPrio',
+                                    formatter: '.priorityState'
+                                }"
+                            />
+                        </table:template>
+                    </table:Column>
+
+                    <table:Column width="8rem">
+                        <Label text="Status" />
+                        <table:template>
+                            <ObjectStatus
+                                text="{
+                                    path: 'table>WiStat',
+                                    formatter: '.statusText'
+                                }"
+                                state="{
+                                    path: 'table>WiStat',
+                                    formatter: '.statusState'
+                                }"
+                            />
+                        </table:template>
+                    </table:Column>
+
+                    <table:Column width="12rem">
+                        <Label text="Forwarded By" />
+                        <table:template>
+                            <Text text="{table>WiForwBy}" />
                         </table:template>
                     </table:Column>
                 </table:columns>

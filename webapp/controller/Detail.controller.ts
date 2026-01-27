@@ -2,7 +2,7 @@ import type Router from "sap/ui/core/routing/Router";
 import Base from "./Base.controller";
 import type Model from "sap/ui/model/Model";
 import type { Route$PatternMatchedEvent } from "sap/ui/core/routing/Route";
-import type { DetailRouteArgs, QueriesModelData, Step, TreeNode } from "base/types/pages/main";
+import type { DetailRouteArgs, Step, Task, TaskListResults, TreeNode } from "base/types/pages/main";
 import type { ListBase$ItemPressEvent } from "sap/m/ListBase";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import type { FilterPayload } from "base/types/filter";
@@ -16,15 +16,14 @@ import type Select from "sap/m/Select";
 import type Switch from "sap/m/Switch";
 import type TextArea from "sap/m/TextArea";
 import type TimePicker from "sap/m/TimePicker";
-import Token from "sap/m/Token";
 import type { FilterBar$FilterChangeEvent } from "sap/ui/comp/filterbar/FilterBar";
-import type FilterGroupItem from "sap/ui/comp/filterbar/FilterGroupItem";
 import Filter from "sap/ui/model/Filter";
 import type FilterBar from "sap/ui/comp/filterbar/FilterBar";
 import type Table from "sap/ui/table/Table";
 import type Title from "sap/m/Title";
 import type ODataModel from "sap/ui/model/odata/v2/ODataModel";
 import type { ODataError, ODataResponses } from "base/types/odata";
+import FilterOperator from "sap/ui/model/FilterOperator";
 
 /**
  * @namespace base.controller
@@ -34,6 +33,9 @@ export default class Detail extends Base {
   private Router: Router;
   private Model: Model;
   private FocusFullScreenButton: boolean;
+
+  private StepId: string;
+  private SubstepId: string;
 
   // Filter
   private expandedLabel: Title;
@@ -45,40 +47,31 @@ export default class Detail extends Base {
     this.Router = this.getRouter();
     this.Model = this.getComponentModel();
 
-    const table = new JSONModel({ tableRow: [] });
+    this.table = this.getControlById("table");
+
+    const table = new JSONModel({ Rows: [] });
     this.setModel(table, "table");
 
     this.setModel(
       new JSONModel({
-        // Implement
+        // Implement for master data
       }),
       "master"
     );
 
-    // Filters
-    this.expandedLabel = this.getControlById<Title>("expandedLabelA");
-    this.snappedLabel = this.getControlById<Title>("snappedLabelA");
     this.filterBar = this.getControlById<FilterBar>("filterbarA");
-
-    // Filter initialize
-    this.filterBar.registerFetchData(this.fetchData);
-    this.filterBar.registerApplyData(this.applyData);
-    this.filterBar.registerGetFiltersWithValues(this.getFiltersWithValues);
 
     // Attach a listener to multiple routes.
     // This ensures that whether the user is on the List, Detail, or Sub-detail page,
     // bind the correct element to the detaiol view.
     this.Router.getRoute("list")?.attachPatternMatched(this.onProductMatched);
     this.Router.getRoute("detail")?.attachPatternMatched(this.onProductMatched);
-    this.Router.getRoute("detailDetail")?.attachPatternMatched(this.onProductMatched);
   }
 
+  // Table item press Implemet ?
   public handleItemPress(Event: ListBase$ItemPressEvent) {
     console.log(Event.getSource().getMetadata().getName());
     let oNextUIState = this.getComponent().getFCLHelper().getNextUIState(2);
-
-    let bindingContext = Event.getParameter("listItem")?.getBindingContext("products");
-    let supplierPath = bindingContext?.getPath() || "";
   }
 
   public onProductMatched = (Event: Route$PatternMatchedEvent) => {
@@ -90,19 +83,22 @@ export default class Detail extends Base {
         const StepId = args.stepId;
         const SubstepId = args.substepId;
 
+        this.StepId = args.stepId;
+        this.SubstepId = args.substepId;
+
         const oModel = this.getModel("queries");
         const Data = <TreeNode[]>oModel.getProperty("/ActiveQueries") || [];
 
-        console.log(Data);
         // 1. Find the Parent Index
         const StepIdx = Data.findIndex((step) => step.id === StepId);
 
         // 2. Find the Substep Index within that parent
-        const Children = Data[StepIdx]?.children || [];
-        const SubIdx = Children.findIndex((sub) => sub.id === SubstepId);
+        const SubStep = Data[StepIdx]?.SubStepList || [];
+        const SubIdx = SubStep.findIndex((sub) => sub.id === SubstepId);
 
         // 3. Construct the nested path
-        const ResolvedPath = `/ActiveQueries/${StepIdx}/children/${SubIdx}`;
+        const ResolvedPath = `/ActiveQueries/${StepIdx}/SubStepList/${SubIdx}/`;
+
         console.log(ResolvedPath);
 
         this.getView()?.bindElement({
@@ -110,7 +106,9 @@ export default class Detail extends Base {
           model: "queries",
         });
 
-        this.filterBar.fireSearch();
+        this.setTableData(StepIdx, SubIdx);
+
+        // this.filterBar.fireSearch(); // For BE request
       })
       .catch((error) => {
         console.log(error);
@@ -120,6 +118,16 @@ export default class Detail extends Base {
       });
   };
 
+  // Get table data with view binding path
+  private setTableData(StepIdx: number, SubIdx: number) {
+    const model = this.getModel("queries");
+    const TaskData = <Task[]>model?.getProperty(`/ActiveQueries/${StepIdx}/SubStepList/${SubIdx}/TaskList`);
+
+    const tableModel = this.getModel("table");
+    tableModel.setProperty("/Rows", TaskData);
+    console.log("Task List", TaskData);
+  }
+
   private onGetStepData() {
     return new Promise((resolve, reject) => {
       const oModel = this.getModel<ODataModel>();
@@ -128,7 +136,7 @@ export default class Detail extends Base {
 
       oModel.read("/StepListSet", {
         urlParameters: {
-          $expand: "ToSubstepList",
+          $expand: "ToSubstepList/ToTaskList",
         },
         success: (oData: ODataResponses) => {
           const Steps = <Step[]>oData.results || [];
@@ -140,20 +148,26 @@ export default class Detail extends Base {
               type: "folder",
               id: Step.Step,
               // Map substeps to the 'children' property
-              children: (Step.ToSubstepList?.results || []).map((Sub) => {
+              SubStepList: (Step.ToSubstepList?.results || []).map((Sub) => {
                 return {
                   text: Sub.SubstepDescr, // Child title
                   type: "document",
                   id: Sub.Substep,
-                  // CRITICAL: Child nodes must store their parent's ID for routing
+
                   stepId: Step.Step,
-                  children: [], // tasks nodes
+                  TaskList: (Sub.ToTaskList?.results || []).map((task: Task) => {
+                    return {
+                      ...task, // Spreads all properties: WiText, WiPrio, WiStat, etc.
+                    };
+                  }), // tasks nodes
                 };
               }),
             };
           });
 
           jsonModel.setProperty("/ActiveQueries", FormattedTree);
+
+          console.log(FormattedTree);
 
           resolve(true);
         },
@@ -165,253 +179,6 @@ export default class Detail extends Base {
   }
 
   // #region Filters
-  /**
-   * Get value fields to create new filter variant
-   */
-  private fetchData = () => {
-    return this.filterBar.getAllFilterItems(false).reduce<FilterPayload[]>((acc, item: FilterGroupItem) => {
-      const control = item.getControl();
-      const groupName = item.getGroupName();
-      const fieldName = item.getName();
-
-      if (control) {
-        let fieldData: string | string[] = "";
-
-        switch (true) {
-          case this.isControl<Input>(control, "sap.m.Input"): {
-            fieldData = control.getValue();
-            break;
-          }
-
-          case this.isControl<TextArea>(control, "sap.m.TextArea"): {
-            fieldData = control.getValue();
-            break;
-          }
-
-          case this.isControl<MultiInput>(control, "sap.m.MultiInput"): {
-            fieldData = control.getTokens().map((token) => token.getKey());
-            break;
-          }
-
-          case this.isControl<DatePicker>(control, "sap.m.DatePicker"): {
-            fieldData = control.getValue();
-            break;
-          }
-
-          case this.isControl<TimePicker>(control, "sap.m.TimePicker"): {
-            fieldData = control.getValue();
-            break;
-          }
-
-          case this.isControl<MultiComboBox>(control, "sap.m.MultiComboBox"): {
-            fieldData = control.getSelectedKeys();
-            break;
-          }
-
-          case this.isControl<Select>(control, "sap.m.Select"): {
-            fieldData = control.getSelectedKey();
-            break;
-          }
-
-          case this.isControl<ComboBox>(control, "sap.m.ComboBox"): {
-            fieldData = control.getSelectedKey();
-            break;
-          }
-
-          case this.isControl<CheckBox>(control, "sap.m.CheckBox"): {
-            fieldData = control.getSelected().toString();
-            break;
-          }
-
-          case this.isControl<Switch>(control, "sap.m.Switch"): {
-            fieldData = control.getState().toString();
-            break;
-          }
-          default:
-            break;
-        }
-
-        acc.push({
-          groupName,
-          fieldName,
-          fieldData,
-        });
-      }
-
-      return acc;
-    }, []);
-  };
-
-  /**
-   * Apply value fields from filter variant
-   */
-  private applyData = (data: unknown) => {
-    (<FilterPayload[]>data).forEach((item) => {
-      const { groupName, fieldName, fieldData } = item;
-      const control = this.filterBar.determineControlByName(fieldName, groupName);
-
-      switch (true) {
-        case this.isControl<Input>(control, "sap.m.Input"): {
-          control.setValue(<string>fieldData);
-          break;
-        }
-
-        case this.isControl<TextArea>(control, "sap.m.TextArea"): {
-          control.setValue(<string>fieldData);
-          break;
-        }
-
-        case this.isControl<MultiInput>(control, "sap.m.MultiInput"): {
-          const tokens = (<string[]>fieldData).map((key) => new Token({ key, text: key }));
-          control.setTokens(tokens);
-          break;
-        }
-
-        case this.isControl<DatePicker>(control, "sap.m.DatePicker"): {
-          control.setValue(<string>fieldData);
-          break;
-        }
-
-        case this.isControl<TimePicker>(control, "sap.m.TimePicker"): {
-          control.setValue(<string>fieldData);
-          break;
-        }
-
-        case this.isControl<MultiComboBox>(control, "sap.m.MultiComboBox"): {
-          control.setSelectedKeys(<string[]>fieldData);
-          break;
-        }
-
-        case this.isControl<Select>(control, "sap.m.Select"): {
-          control.setSelectedKey(<string>fieldData);
-          break;
-        }
-
-        case this.isControl<ComboBox>(control, "sap.m.ComboBox"): {
-          control.setSelectedKey(<string>fieldData);
-          break;
-        }
-
-        case this.isControl<CheckBox>(control, "sap.m.CheckBox"): {
-          control.setSelected();
-          break;
-        }
-
-        case this.isControl<Switch>(control, "sap.m.Switch"): {
-          control.setState();
-          break;
-        }
-        default:
-          break;
-      }
-    });
-  };
-
-  // Get filters with values to display in labels
-  private getFiltersWithValues = () => {
-    return this.filterBar.getFilterGroupItems().reduce<FilterGroupItem[]>((acc, item) => {
-      const control = item.getControl();
-
-      if (control) {
-        switch (true) {
-          case this.isControl<Input>(control, "sap.m.Input"): {
-            const value = control.getValue();
-
-            if (value) {
-              acc.push(item);
-            }
-            break;
-          }
-
-          case this.isControl<TextArea>(control, "sap.m.TextArea"): {
-            const value = control.getValue();
-
-            if (value) {
-              acc.push(item);
-            }
-            break;
-          }
-
-          case this.isControl<MultiInput>(control, "sap.m.MultiInput"): {
-            const tokens = control.getTokens();
-
-            if (tokens.length) {
-              acc.push(item);
-            }
-            break;
-          }
-
-          case this.isControl<DatePicker>(control, "sap.m.DatePicker"): {
-            const value = control.getValue();
-
-            if (value) {
-              acc.push(item);
-            }
-            break;
-          }
-
-          case this.isControl<TimePicker>(control, "sap.m.TimePicker"): {
-            const value = control.getValue();
-
-            if (value) {
-              acc.push(item);
-            }
-            break;
-          }
-
-          case this.isControl<MultiComboBox>(control, "sap.m.MultiComboBox"): {
-            const keys = control.getSelectedKeys();
-
-            if (keys.length) {
-              acc.push(item);
-            }
-            break;
-          }
-
-          case this.isControl<Select>(control, "sap.m.Select"): {
-            const key = control.getSelectedKey();
-
-            if (key) {
-              acc.push(item);
-            }
-            break;
-          }
-
-          case this.isControl<ComboBox>(control, "sap.m.ComboBox"): {
-            const key = control.getSelectedKey();
-
-            if (key) {
-              acc.push(item);
-            }
-            break;
-          }
-
-          case this.isControl<CheckBox>(control, "sap.m.CheckBox"): {
-            const value = control.getSelected().toString();
-
-            if (value) {
-              acc.push(item);
-            }
-            break;
-          }
-
-          case this.isControl<Switch>(control, "sap.m.Switch"): {
-            const value = control.getState().toString();
-
-            if (value) {
-              acc.push(item);
-            }
-            break;
-          }
-          default:
-            break;
-        }
-      }
-
-      return acc;
-    }, []);
-  };
-
   public onSelectionChange(event: FilterBar$FilterChangeEvent) {
     this.filterBar.fireEvent("filterChange", event);
   }
@@ -482,6 +249,77 @@ export default class Detail extends Base {
     return filters;
   }
 
+  // #endregion Filters
+
+  // #region Formatters
+  public statusText(Status: string) {
+    const mStatus: Record<string, string> = {
+      WAITING: "Waiting",
+      READY: "Ready",
+      SELECTED: "Accepted",
+      STARTED: "In Process",
+      ERROR: "Error",
+      COMMITTED: "Executed",
+      COMPLETED: "Completed",
+      CANCELLED: "Logically Deleted",
+      CHECKED: "In Preparation",
+      EXPCAUGHT: "Exception Caught",
+      EXPHANDLR: "Exception Active",
+    };
+    return mStatus[Status] || Status;
+  }
+
+  public statusState(Status: string) {
+    switch (Status) {
+      case "READY":
+      case "COMMITTED":
+      case "COMPLETED":
+        return "Success"; // Green
+      case "STARTED":
+      case "CHECKED":
+        return "Information"; // Blue
+      case "WAITING":
+      case "SELECTED":
+        return "None"; // Grey/Neutral
+      case "ERROR":
+      case "EXPCAUGHT":
+      case "EXPHANDLR":
+        return "Error"; // Red
+      case "CANCELLED":
+        return "Warning"; // Orange
+      default:
+        return "None";
+    }
+  }
+
+  public priorityText(Priority: string) {
+    const mPriority: Record<string, string> = {
+      "1": "1 Highest - Express",
+      "2": "2 Very high",
+      "3": "3 Higher",
+      "4": "4 High",
+      "5": "5 Medium",
+      "6": "6 Low",
+      "7": "7 Lower",
+      "8": "8 Very low",
+      "9": "9 Lowest",
+    };
+    return mPriority[Priority] || Priority;
+  }
+
+  /**
+   * Returns semantic state based on priority level
+   */
+  public priorityState(Priority: string) {
+    const Prio = parseInt(Priority, 2);
+    if (Prio <= 3) return "Error"; // Red for High/Express
+    if (Prio <= 5) return "Warning"; // Orange for Medium
+    if (Prio <= 9) return "Success"; // Green for Low
+    return "None";
+  }
+
+  // #endregion Formatters
+
   public onSearch() {
     const oDataModel = this.getModel<ODataModel>();
     const tableModel = this.getModel<JSONModel>("table");
@@ -490,7 +328,22 @@ export default class Detail extends Base {
 
     this.table.setBusy(true);
 
+    // get taskList table odata
+    oDataModel.read("/TaskListSet", {
+      filters: [
+        new Filter("Step", FilterOperator.EQ, this.StepId),
+        new Filter("Substep", FilterOperator.EQ, this.SubstepId),
+      ],
+      success: (oData: ODataResponses<Task[]>) => {
+        tableModel.setProperty("/Rows", oData);
+        this.table.setBusy(false);
+      },
+      error: (Error: ODataError) => {
+        console.error(Error);
+        this.table.setBusy(false);
+      },
+    });
+
     this.table.setShowOverlay(false);
   }
-  // #endregion Filters
 }
