@@ -99,12 +99,6 @@
       },
       "routes": [
         {
-          "pattern": "page2",
-          "name": "page2",
-          "target": "page2",
-          "layout": "EndColumnFullScreen"
-        },
-        {
           "pattern": ":layout:",
           "name": "list",
           "target": [
@@ -122,10 +116,6 @@
         }
       ],
       "targets": {
-        "test2": {
-          "name": "TestPage",
-          "controlAggregation": "beginColumnPages"
-        },
         "list": {
           "name": "List",
           "controlAggregation": "beginColumnPages"
@@ -133,14 +123,6 @@
         "detail": {
           "name": "Detail",
           "controlAggregation": "midColumnPages"
-        },
-        "detailDetail": {
-          "name": "DetailDetail",
-          "controlAggregation": "endColumnPages"
-        },
-        "page2": {
-          "name": "AboutPage",
-          "controlAggregation": "endColumnPages"
         }
       }
     }

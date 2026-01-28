@@ -41,6 +41,7 @@ export default class Detail extends Base {
   private expandedLabel: Title;
   private snappedLabel: Title;
   private filterBar: FilterBar;
+  
   private table: Table;
 
   override onInit(): void {
@@ -106,9 +107,9 @@ export default class Detail extends Base {
           model: "queries",
         });
 
-        this.setTableData(StepIdx, SubIdx);
-
         // this.filterBar.fireSearch(); // For BE request
+
+        this.setTableData(StepIdx, SubIdx);
       })
       .catch((error) => {
         console.log(error);
@@ -324,16 +325,21 @@ export default class Detail extends Base {
     const oDataModel = this.getModel<ODataModel>();
     const tableModel = this.getModel<JSONModel>("table");
 
-    const filters = this.getFilters();
+    const dynamicFilters = this.getFilters(); // your existing array
+    const fixedFilters = [
+      new Filter("Step", FilterOperator.EQ, this.StepId),
+      new Filter("Substep", FilterOperator.EQ, this.SubstepId),
+    ];
+
+    const allFilters = [...fixedFilters, ...dynamicFilters];
+
+    console.log(allFilters);
 
     this.table.setBusy(true);
 
     // get taskList table odata
     oDataModel.read("/TaskListSet", {
-      filters: [
-        new Filter("Step", FilterOperator.EQ, this.StepId),
-        new Filter("Substep", FilterOperator.EQ, this.SubstepId),
-      ],
+      filters: allFilters,
       success: (oData: ODataResponses<Task[]>) => {
         tableModel.setProperty("/Rows", oData);
         this.table.setBusy(false);

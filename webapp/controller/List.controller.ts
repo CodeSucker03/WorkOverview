@@ -22,6 +22,8 @@ export default class ListController extends Base {
   private Router!: Router;
   private DescendingSort: boolean;
 
+  private tree: Tree;
+
   override onInit(): void {
     this.Router = this.getRouter();
 
@@ -33,12 +35,9 @@ export default class ListController extends Base {
     this.Router.getRoute("list")?.attachPatternMatched(this.onProductMatched);
     this.Router.getRoute("detail")?.attachPatternMatched(this.onProductMatched);
 
+    this.tree = this.getControlById<Tree>("navtree");
+
     // Init Navigate
-    this.Router.navTo("detail", {
-      layout: "TwoColumnsMidExpanded",
-      stepId: "STEP01",
-      substepId: "SSTEP1.1",
-    });
   }
 
   // Detail Nav
@@ -108,8 +107,7 @@ export default class ListController extends Base {
     this.getMetadataLoaded()
       .then(() => this.onGetStepData())
       .then(() => {
-        const tree = this.getControlById<Tree>("navtree");
-        tree.expandToLevel(99);
+        this.tree.expandToLevel(99);
       })
       .catch((error) => {
         console.log(error);
@@ -123,16 +121,13 @@ export default class ListController extends Base {
   private onGetStepData() {
     // return new Promise((resolve, reject) => {
     //   const oModel = this.getModel<ODataModel>();
-
     //   const jsonModel = this.getModel("queries");
-
     //   oModel.read("/StepListSet", {
     //     urlParameters: {
     //       $expand: "ToSubstepList",
     //     },
     //     success: (oData: ODataResponses) => {
     //       const Steps = <Step[]>oData.results || [];
-
     //       // Map response to jsonModel
     //       const FormattedTree = Steps.map((Step) => {
     //         return {
@@ -152,9 +147,7 @@ export default class ListController extends Base {
     //           }),
     //         };
     //       });
-
     //       jsonModel.setProperty("/ActiveQueries", FormattedTree);
-
     //       resolve(true);
     //     },
     //     error: (error: ODataError) => {
