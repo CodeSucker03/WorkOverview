@@ -240,7 +240,20 @@
                                         id="filterForwardedBy"
                                         forceSelection="false"
                                         width="100%"
-                                    />
+                                    >
+                                        <core:Item
+                                            key=""
+                                            text="All"
+                                        />
+                                        <core:Item
+                                            key="SYSTEM"
+                                            text="System"
+                                        />
+                                        <core:Item
+                                            key="USER"
+                                            text="User"
+                                        />
+                                    </Select>
                                 </fb:control>
                             </fb:FilterGroupItem>
                         </fb:filterGroupItems>
@@ -312,7 +325,7 @@
                             />
                         </table:template>
                     </table:Column>
-                    
+
                     <table:Column width="10rem">
                         <Label text="TaskID" />
                         <table:template>
