@@ -42,9 +42,6 @@ export default class ListController extends Base {
 
   // Detail Nav
   public onListItemPress(oEvent: ListBase$ItemPressEvent): void {
-    // Use the FCL Helper to determine the next layout state (e.g., transition to 'TwoColumnsBeginExpanded')
-    const NextUIState = this.getComponent().getFCLHelper().getNextUIState(1);
-
     const item = oEvent.getSource().getSelectedItem();
     if (!item) {
       return;
@@ -104,9 +101,11 @@ export default class ListController extends Base {
   }
 
   private onProductMatched = (Event: Route$PatternMatchedEvent) => {
+    this.tree.setBusy(true);
     this.getMetadataLoaded()
-      .then(() => this.onGetStepData())
       .then(() => {
+        this.tree.setBusy(false);
+
         this.tree.expandToLevel(99);
       })
       .catch((error) => {
@@ -116,46 +115,4 @@ export default class ListController extends Base {
         // loading off
       });
   };
-
-  // #region GetSteps
-  private onGetStepData() {
-    // return new Promise((resolve, reject) => {
-    //   const oModel = this.getModel<ODataModel>();
-    //   const jsonModel = this.getModel("queries");
-    //   oModel.read("/StepListSet", {
-    //     urlParameters: {
-    //       $expand: "ToSubstepList",
-    //     },
-    //     success: (oData: ODataResponses) => {
-    //       const Steps = <Step[]>oData.results || [];
-    //       // Map response to jsonModel
-    //       const FormattedTree = Steps.map((Step) => {
-    //         return {
-    //           text: Step.StepDescr, // Parent title
-    //           type: "folder",
-    //           id: Step.Step,
-    //           // Map substeps to the 'children' property
-    //           SubStepList: (Step.ToSubstepList?.results || []).map((Sub) => {
-    //             return {
-    //               text: Sub.SubstepDescr, // Child title
-    //               type: "document",
-    //               id: Sub.Substep,
-    //               // CRITICAL: Child nodes must store their parent's ID for routing
-    //               stepId: Step.Step,
-    //               TaskList: [], // tasks nodes
-    //             };
-    //           }),
-    //         };
-    //       });
-    //       jsonModel.setProperty("/ActiveQueries", FormattedTree);
-    //       resolve(true);
-    //     },
-    //     error: (error: ODataError) => {
-    //       const errorMessage = error.message || "Đã có lỗi xảy ra";
-    //       MessageBox.error(errorMessage);
-    //       reject(error);
-    //     },
-    //   });
-    // });
-  }
 }

@@ -1,10 +1,10 @@
 /*global QUnit*/
-import Controller from "base/controller/FlexibleColumnLayout.controller";
+import Controller from "base/controller/Main.controller";
 
-QUnit.module("FlexibleColumnLayout Controller");
+QUnit.module("Main Controller");
 
 QUnit.test("I should test the Main controller", function (assert: Assert) {
-	const oAppController = new Controller("FlexibleColumnLayout");
+	const oAppController = new Controller("Main");
 	oAppController.onInit();
 	assert.ok(oAppController);
 });

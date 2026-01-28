@@ -265,6 +265,7 @@
                         <Select
                             selectedKey="inprogress"
                             width="200px"
+                            enabled="false"
                         >
                             <items>
                                 <core:Item
@@ -291,6 +292,12 @@
                         />
                     </OverflowToolbar>
                 </table:extension>
+                <table:noData>
+                    <IllustratedMessage
+                        illustrationType="sapIllus-NoSearchResults"
+                        enableVerticalResponsiveness="true"
+                    />
+                </table:noData>
                 <table:columns>
                     <table:Column
                         filterProperty="WiText"

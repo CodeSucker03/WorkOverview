@@ -2,7 +2,7 @@
     xmlns="sap.f"
     xmlns:mvc="sap.ui.core.mvc"
     displayBlock="true"
-    controllerName="base.controller.FlexibleColumnLayout"
+    controllerName="base.controller.Main"
     height="100%"
 >
     <FlexibleColumnLayout

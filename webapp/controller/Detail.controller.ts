@@ -2,18 +2,13 @@ import type Router from "sap/ui/core/routing/Router";
 import Base from "./Base.controller";
 import type Model from "sap/ui/model/Model";
 import type { Route$PatternMatchedEvent } from "sap/ui/core/routing/Route";
-import type { DetailRouteArgs, Step, Task, TaskListResults, TreeNode } from "base/types/pages/main";
+import type { DetailRouteArgs, FieldValueHelpItem, Step, Task, TaskListResults, TreeNode } from "base/types/pages/main";
 import type { ListBase$ItemPressEvent } from "sap/m/ListBase";
 import JSONModel from "sap/ui/model/json/JSONModel";
-import type { FilterPayload } from "base/types/filter";
-import type CheckBox from "sap/m/CheckBox";
 import type ComboBox from "sap/m/ComboBox";
 import type DatePicker from "sap/m/DatePicker";
 import type Input from "sap/m/Input";
-import type MultiComboBox from "sap/m/MultiComboBox";
-import type MultiInput from "sap/m/MultiInput";
 import type Select from "sap/m/Select";
-import type Switch from "sap/m/Switch";
 import type TextArea from "sap/m/TextArea";
 import type TimePicker from "sap/m/TimePicker";
 import type { FilterBar$FilterChangeEvent } from "sap/ui/comp/filterbar/FilterBar";
@@ -24,6 +19,7 @@ import type Title from "sap/m/Title";
 import type ODataModel from "sap/ui/model/odata/v2/ODataModel";
 import type { ODataError, ODataResponses } from "base/types/odata";
 import FilterOperator from "sap/ui/model/FilterOperator";
+import type ListBinding from "sap/ui/model/ListBinding";
 
 /**
  * @namespace base.controller
@@ -41,7 +37,7 @@ export default class Detail extends Base {
   private expandedLabel: Title;
   private snappedLabel: Title;
   private filterBar: FilterBar;
-  
+
   private table: Table;
 
   override onInit(): void {
@@ -100,8 +96,6 @@ export default class Detail extends Base {
         // 3. Construct the nested path
         const ResolvedPath = `/ActiveQueries/${StepIdx}/SubStepList/${SubIdx}/`;
 
-        console.log(ResolvedPath);
-
         this.getView()?.bindElement({
           path: ResolvedPath,
           model: "queries",
@@ -129,7 +123,7 @@ export default class Detail extends Base {
     console.log("Task List", TaskData);
   }
 
-  private onGetStepData() {
+  private async onGetStepData() {
     return new Promise((resolve, reject) => {
       const oModel = this.getModel<ODataModel>();
 
@@ -168,8 +162,6 @@ export default class Detail extends Base {
 
           jsonModel.setProperty("/ActiveQueries", FormattedTree);
 
-          console.log(FormattedTree);
-
           resolve(true);
         },
         error: (error: ODataError) => {
@@ -179,27 +171,64 @@ export default class Detail extends Base {
     });
   }
 
+  // #region Master data
+  private async onGetMasterData() {
+    return new Promise((resolve, reject) => {
+      const oDataModel = this.getModel<ODataModel>();
+      const masterModel = this.getModel("master");
+
+      oDataModel.read("/FieldValueHelpSet", {
+        success: (response: ODataResponses<FieldValueHelpItem[]>) => {
+          const Status: FieldValueHelpItem[] = [];
+          const Priority: FieldValueHelpItem[] = [];
+          const From: FieldValueHelpItem[] = [];
+          const ForwardedBy: FieldValueHelpItem[] = [];
+
+          response.results.forEach((item) => {
+            switch (item.FieldName) {
+              case "Status": {
+                Status.push(item);
+                break;
+              }
+
+              case "Priority": {
+                Priority.push(item);
+                break;
+              }
+
+              case "From": {
+                From.push(item);
+                break;
+              }
+              case "Forwarded By": {
+                ForwardedBy.push(item);
+                break;
+              }
+              default:
+                break;
+            }
+          });
+
+          masterModel.setProperty("/Status", Status);
+          masterModel.setProperty("/Priority", Priority);
+          masterModel.setProperty("/From", From);
+          masterModel.setProperty("/ForwardedBy", ForwardedBy);
+
+          console.log("Master data loaded:", masterModel.getData());
+
+          resolve(true);
+        },
+        error: (error: ODataError) => {
+          reject(error);
+        },
+      });
+    });
+  }
+  // #endregion Master data
+
   // #region Filters
   public onSelectionChange(event: FilterBar$FilterChangeEvent) {
     this.filterBar.fireEvent("filterChange", event);
-  }
-
-  public onFilterChange() {
-    this.updateLabelsAndTable();
-  }
-
-  public onAfterVariantLoad() {
-    this.updateLabelsAndTable();
-  }
-
-  private updateLabelsAndTable() {
-    const expandedLabel = this.filterBar.retrieveFiltersWithValuesAsTextExpanded();
-    const snappedLabel = this.filterBar.retrieveFiltersWithValuesAsText();
-
-    this.expandedLabel.setText(expandedLabel);
-    this.snappedLabel.setText(snappedLabel);
-
-    this.table.setShowOverlay(true);
   }
 
   public getFilters() {
@@ -333,23 +362,28 @@ export default class Detail extends Base {
 
     const allFilters = [...fixedFilters, ...dynamicFilters];
 
-    console.log(allFilters);
+    console.log("Filter values", allFilters);
 
-    this.table.setBusy(true);
+    const Binding = <ListBinding>this.table.getBinding("rows");
+    if (!Binding) {
+      return;
+    }
+    Binding.filter(allFilters, "Application");
 
-    // get taskList table odata
-    oDataModel.read("/TaskListSet", {
-      filters: allFilters,
-      success: (oData: ODataResponses<Task[]>) => {
-        tableModel.setProperty("/Rows", oData);
-        this.table.setBusy(false);
-      },
-      error: (Error: ODataError) => {
-        console.error(Error);
-        this.table.setBusy(false);
-      },
-    });
 
-    this.table.setShowOverlay(false);
+    // get taskList table BE odata
+
+    // this.table.setBusy(true);
+    // oDataModel.read("/TaskListSet", {
+    //   filters: allFilters,
+    //   success: (oData: ODataResponses<Task[]>) => {
+    //     tableModel.setProperty("/Rows", oData);
+    //     this.table.setBusy(false);
+    //   },
+    //   error: (Error: ODataError) => {
+    //     console.error(Error);
+    //     this.table.setBusy(false);
+    //   },
+    // });
   }
 }

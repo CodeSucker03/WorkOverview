@@ -74,7 +74,7 @@ export interface TreeNode {
   id: string;
   // stepId is optional because parents (Folders) don't have a parent stepId
   stepId?: string;
-  // Recursive property: children contains more ITreeNode objects
+  // Recursive property: children contains more TreeNode objects
   SubStepList: TreeNode[];
 }
 
@@ -83,4 +83,10 @@ export interface TreeNode {
  */
 export interface QueriesModelData {
   ActiveQueries: TreeNode[];
+}
+
+export interface FieldValueHelpItem {
+  FieldKey: string;
+  FieldValue: string;
+  FieldName: string;
 }

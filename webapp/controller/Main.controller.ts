@@ -85,7 +85,6 @@ export default class FlexibleColumnLayout extends Base {
       "isNavigationArrow"
     ) as boolean;
     const Layout = Event.getParameter("layout") as string;
-    console.log("Interact change", Layout);
 
     this.updateUIElements();
 
@@ -119,7 +118,7 @@ export default class FlexibleColumnLayout extends Base {
 
     Model.setData(oUIState);
 
-    // Special 1st navigate case
+    // Special case (force layout follow params)
     if (this.currentRouteName === "detail") {
       Model.setProperty("/layout", this.currentLayout);
     }

@@ -27,8 +27,8 @@
             <Tree
                 id="navtree"
                 items="{
-						path: 'queries>/ActiveQueries',
-						parameters: { arrayNames: ['SubStepList'] }
+                    path: 'queries>/ActiveQueries',
+                    parameters: { arrayNames: ['SubStepList'] }
                 }"
                 includeItemInSelection="true"
                 mode="SingleSelectMaster"
@@ -37,7 +37,7 @@
                 <StandardTreeItem
                     title="{queries>text}"
                     icon="{= ${queries>type} === 'folder' ? 'sap-icon://folder-blank' : 'sap-icon://folder' }"
-                    counter=""
+                    counter="{= ${queries>TaskList}.length}"
                 />
             </Tree>
         </f:content>

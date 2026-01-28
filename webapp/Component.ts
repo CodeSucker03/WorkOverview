@@ -72,7 +72,7 @@ export default class Component extends BaseComponent {
   // It makes the application a lot faster and, through that, better to use.
   public override createContent(): Control | Promise<Control | null> | null {
     const appView = View.create({
-      viewName: `${this.getAppID()}.view.FlexibleColumnLayout`,
+      viewName: `${this.getAppID()}.view.Main`,
       type: "XML",
       viewData: { component: this },
     });
