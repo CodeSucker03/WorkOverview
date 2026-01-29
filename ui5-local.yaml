@@ -55,10 +55,6 @@ server:
       configuration:
         mountPath: /
         services:
-          - urlPath: /sap/opu/odata/sap/ZLEAVE_REQUEST_SRV
-            metadataPath: ./webapp/localService/mainService/metadata.xml
-            mockdataPath: ./webapp/localService/mainService/data
-            generateMockData: true
           - urlPath: /sap/opu/odata/sap/ZODATA_MSTT_WORKOV_SRV
             metadataPath: ./webapp/localService/mainService/metadata.xml
             mockdataPath: ./webapp/localService/mainService/data

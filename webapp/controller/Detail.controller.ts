@@ -2,7 +2,7 @@ import type Router from "sap/ui/core/routing/Router";
 import Base from "./Base.controller";
 import type Model from "sap/ui/model/Model";
 import type { Route$PatternMatchedEvent } from "sap/ui/core/routing/Route";
-import type { DetailRouteArgs, FieldValueHelpItem, Step, Task, TaskListResults, TreeNode } from "base/types/pages/main";
+import type { DetailRouteArgs, FieldValueHelpItem, Step, Task, TreeNode } from "base/types/pages/main";
 import type { ListBase$ItemPressEvent } from "sap/m/ListBase";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import type ComboBox from "sap/m/ComboBox";
@@ -15,7 +15,6 @@ import type { FilterBar$FilterChangeEvent } from "sap/ui/comp/filterbar/FilterBa
 import Filter from "sap/ui/model/Filter";
 import type FilterBar from "sap/ui/comp/filterbar/FilterBar";
 import type Table from "sap/ui/table/Table";
-import type Title from "sap/m/Title";
 import type ODataModel from "sap/ui/model/odata/v2/ODataModel";
 import type { ODataError, ODataResponses } from "base/types/odata";
 import FilterOperator from "sap/ui/model/FilterOperator";
@@ -34,8 +33,6 @@ export default class Detail extends Base {
   private SubstepId: string;
 
   // Filter
-  private expandedLabel: Title;
-  private snappedLabel: Title;
   private filterBar: FilterBar;
 
   private table: Table;
@@ -71,9 +68,11 @@ export default class Detail extends Base {
     let oNextUIState = this.getComponent().getFCLHelper().getNextUIState(2);
   }
 
+  // #region Route
   public onProductMatched = (Event: Route$PatternMatchedEvent) => {
     this.getMetadataLoaded()
       .then(() => this.onGetStepData())
+      .then(() => this.handleFirstNav())
       .then(() => {
         const args = <DetailRouteArgs>Event.getParameter("arguments");
 
@@ -101,9 +100,7 @@ export default class Detail extends Base {
           model: "queries",
         });
 
-        // this.filterBar.fireSearch(); // For BE request
-
-        this.setTableData(StepIdx, SubIdx);
+        this.filterBar.fireSearch(); // For BE request
       })
       .catch((error) => {
         console.log(error);
@@ -112,16 +109,6 @@ export default class Detail extends Base {
         // loading off
       });
   };
-
-  // Get table data with view binding path
-  private setTableData(StepIdx: number, SubIdx: number) {
-    const model = this.getModel("queries");
-    const TaskData = <Task[]>model?.getProperty(`/ActiveQueries/${StepIdx}/SubStepList/${SubIdx}/TaskList`);
-
-    const tableModel = this.getModel("table");
-    tableModel.setProperty("/Rows", TaskData);
-    console.log("Task List", TaskData);
-  }
 
   private async onGetStepData() {
     return new Promise((resolve, reject) => {
@@ -170,61 +157,6 @@ export default class Detail extends Base {
       });
     });
   }
-
-  // #region Master data
-  private async onGetMasterData() {
-    return new Promise((resolve, reject) => {
-      const oDataModel = this.getModel<ODataModel>();
-      const masterModel = this.getModel("master");
-
-      oDataModel.read("/FieldValueHelpSet", {
-        success: (response: ODataResponses<FieldValueHelpItem[]>) => {
-          const Status: FieldValueHelpItem[] = [];
-          const Priority: FieldValueHelpItem[] = [];
-          const From: FieldValueHelpItem[] = [];
-          const ForwardedBy: FieldValueHelpItem[] = [];
-
-          response.results.forEach((item) => {
-            switch (item.FieldName) {
-              case "Status": {
-                Status.push(item);
-                break;
-              }
-
-              case "Priority": {
-                Priority.push(item);
-                break;
-              }
-
-              case "From": {
-                From.push(item);
-                break;
-              }
-              case "Forwarded By": {
-                ForwardedBy.push(item);
-                break;
-              }
-              default:
-                break;
-            }
-          });
-
-          masterModel.setProperty("/Status", Status);
-          masterModel.setProperty("/Priority", Priority);
-          masterModel.setProperty("/From", From);
-          masterModel.setProperty("/ForwardedBy", ForwardedBy);
-
-          console.log("Master data loaded:", masterModel.getData());
-
-          resolve(true);
-        },
-        error: (error: ODataError) => {
-          reject(error);
-        },
-      });
-    });
-  }
-  // #endregion Master data
 
   // #region Filters
   public onSelectionChange(event: FilterBar$FilterChangeEvent) {
@@ -324,15 +256,15 @@ export default class Detail extends Base {
 
   public priorityText(Priority: string) {
     const mPriority: Record<string, string> = {
-      "1": "1 Highest - Express",
-      "2": "2 Very high",
-      "3": "3 Higher",
-      "4": "4 High",
-      "5": "5 Medium",
-      "6": "6 Low",
-      "7": "7 Lower",
-      "8": "8 Very low",
-      "9": "9 Lowest",
+      "1": " Highest - Express",
+      "2": " Very high",
+      "3": " Higher",
+      "4": " High",
+      "5": " Medium",
+      "6": " Low",
+      "7": " Lower",
+      "8": " Very low",
+      "9": " Lowest",
     };
     return mPriority[Priority] || Priority;
   }
@@ -350,11 +282,39 @@ export default class Detail extends Base {
 
   // #endregion Formatters
 
+  private handleFirstNav() {
+    // Map your data to the tree model as usual
+    const oModel = this.getModel("queries");
+    const modelData = <TreeNode[]>oModel.getProperty("/ActiveQueries") || [];
+
+    //  Get the current hash from the router
+    const CurrentHash = this.Router.getHashChanger().getHash();
+    console.log("Hash ", CurrentHash);
+
+    // ONLY navigate if the hash is empty (Initial App Load)
+    if (!CurrentHash || CurrentHash === "") {
+      if (modelData.length > 0 && modelData[0].SubStepList.length > 0) {
+        const firstStep = modelData[0];
+        const firstSubstep = modelData[0].SubStepList[0];
+
+        this.Router.navTo(
+          "detail",
+          {
+            layout: "TwoColumnsMidExpanded",
+            stepId: firstStep.id,
+            substepId: firstSubstep.id,
+          },
+          true
+        ); // The 'true' argument replaces the history state
+      }
+    }
+  }
+
   public onSearch() {
     const oDataModel = this.getModel<ODataModel>();
     const tableModel = this.getModel<JSONModel>("table");
 
-    const dynamicFilters = this.getFilters(); // your existing array
+    const dynamicFilters = this.getFilters();
     const fixedFilters = [
       new Filter("Step", FilterOperator.EQ, this.StepId),
       new Filter("Substep", FilterOperator.EQ, this.SubstepId),
@@ -364,26 +324,95 @@ export default class Detail extends Base {
 
     console.log("Filter values", allFilters);
 
+    // get taskList table BE odata
+    this.table.setBusy(true);
+    oDataModel.read("/TaskListSet", {
+      filters: fixedFilters,
+      success: (oData: ODataResponses) => {
+        tableModel.setProperty("/Rows", oData.results);
+        console.log(tableModel.getData());
+        this.table.setBusy(false);
+      },
+      error: (Error: ODataError) => {
+        console.error(Error);
+        this.table.setBusy(false);
+      },
+    });
+
+    // Filter through binding
     const Binding = <ListBinding>this.table.getBinding("rows");
     if (!Binding) {
       return;
     }
     Binding.filter(allFilters, "Application");
-
-
-    // get taskList table BE odata
-
-    // this.table.setBusy(true);
-    // oDataModel.read("/TaskListSet", {
-    //   filters: allFilters,
-    //   success: (oData: ODataResponses<Task[]>) => {
-    //     tableModel.setProperty("/Rows", oData);
-    //     this.table.setBusy(false);
-    //   },
-    //   error: (Error: ODataError) => {
-    //     console.error(Error);
-    //     this.table.setBusy(false);
-    //   },
-    // });
   }
+
+  public onRefresh() {
+    this.filterBar.fireSearch();
+  }
+
+  // Get table data with view binding path
+  private setTableData(StepIdx: number, SubIdx: number) {
+    const model = this.getModel("queries");
+    const TaskData = <Task[]>model?.getProperty(`/ActiveQueries/${StepIdx}/SubStepList/${SubIdx}/TaskList`);
+
+    const tableModel = this.getModel("table");
+    tableModel.setProperty("/Rows", TaskData);
+    console.log("Task List", TaskData);
+  }
+
+  // #region Master data
+  private async onGetMasterData() {
+    return new Promise((resolve, reject) => {
+      const oDataModel = this.getModel<ODataModel>();
+      const masterModel = this.getModel("master");
+
+      oDataModel.read("/FieldValueHelpSet", {
+        success: (response: ODataResponses<FieldValueHelpItem[]>) => {
+          const Status: FieldValueHelpItem[] = [];
+          const Priority: FieldValueHelpItem[] = [];
+          const From: FieldValueHelpItem[] = [];
+          const ForwardedBy: FieldValueHelpItem[] = [];
+
+          response.results.forEach((item) => {
+            switch (item.FieldName) {
+              case "Status": {
+                Status.push(item);
+                break;
+              }
+
+              case "Priority": {
+                Priority.push(item);
+                break;
+              }
+
+              case "From": {
+                From.push(item);
+                break;
+              }
+              case "Forwarded By": {
+                ForwardedBy.push(item);
+                break;
+              }
+              default:
+                break;
+            }
+          });
+
+          masterModel.setProperty("/Status", Status);
+          masterModel.setProperty("/Priority", Priority);
+          masterModel.setProperty("/From", From);
+          masterModel.setProperty("/ForwardedBy", ForwardedBy);
+
+          console.log("Master data loaded:", masterModel.getData());
+
+          resolve(true);
+        },
+        error: (error: ODataError) => {
+          reject(error);
+        },
+      });
+    });
+  }
+  // #endregion Master data
 }

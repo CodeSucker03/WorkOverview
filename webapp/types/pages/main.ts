@@ -72,7 +72,7 @@ export interface TreeNode {
   text: string;
   type: "folder" | "document";
   id: string;
-  // stepId is optional because parents (Folders) don't have a parent stepId
+  // stepId is for document ( optional because parents (Folders) don't have a parent stepId )
   stepId?: string;
   // Recursive property: children contains more TreeNode objects
   SubStepList: TreeNode[];

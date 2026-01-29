@@ -9,10 +9,9 @@ import type { Route$PatternMatchedEvent } from "sap/ui/core/routing/Route";
 import type { ListBase$ItemPressEvent } from "sap/m/ListBase";
 import type ListBinding from "sap/ui/model/ListBinding";
 import type { SearchField$SearchEvent } from "sap/m/SearchField";
-import type { Step, TreeNode } from "base/types/pages/main";
+import type { TreeNode } from "base/types/pages/main";
 import Tree from "sap/m/Tree";
-import ODataModel from "sap/ui/model/odata/v2/ODataModel";
-import type { ODataError, ODataResponses } from "base/types/odata";
+
 
 /**
  * @namespace base.controller
@@ -51,13 +50,13 @@ export default class ListController extends Base {
     if (!ctx) {
       return;
     }
-    const Node = ctx.getObject() as TreeNode;
+    const Node = <TreeNode>ctx.getObject();
 
     // Only navigate if it's a document (substep)
     if (Node.type === "document") {
       this.Router.navTo("detail", {
         layout: "TwoColumnsMidExpanded",
-        stepId: Node.stepId, // Extracted from the mapping we did earlier
+        stepId: Node.stepId, 
         substepId: Node.id, // The specific substep ID (e.g., SSTEP1.1)
       });
     }

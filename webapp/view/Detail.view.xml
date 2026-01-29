@@ -10,7 +10,7 @@
     xmlns:svm="sap.ui.comp.smartvariants"
     xmlns:table="sap.ui.table"
 >
-    <f:DynamicPage>
+    <f:DynamicPage showFooter="true">
         <f:title>
             <f:DynamicPageTitle>
                 <f:expandedContent>
@@ -312,11 +312,7 @@
                     />
                 </table:noData>
                 <table:columns>
-                    <table:Column
-                        filterProperty="WiText"
-                        sortProperty="WiText"
-                        width="15rem"
-                    >
+                    <table:Column width="10rem">
                         <Label text="Subject" />
                         <table:template>
                             <Text
@@ -334,13 +330,6 @@
                     </table:Column>
 
                     <table:Column width="10rem">
-                        <Label text="From" />
-                        <table:template>
-                            <Text text="{table>Mancc}" />
-                        </table:template>
-                    </table:Column>
-
-                    <table:Column width="10rem">
                         <Label text="Sent on" />
                         <table:template>
                             <Text text="{table>WiCd}" />
@@ -351,6 +340,7 @@
                         <Label text="Priority" />
                         <table:template>
                             <ObjectStatus
+                                inverted="true"
                                 text="{
                                     path: 'table>WiPrio',
                                     formatter: '.priorityText'
@@ -360,6 +350,13 @@
                                     formatter: '.priorityState'
                                 }"
                             />
+                        </table:template>
+                    </table:Column>
+
+                    <table:Column width="10rem">
+                        <Label text="Due Date" />
+                        <table:template>
+                            <Text text="{table>WiAed}" />
                         </table:template>
                     </table:Column>
 
@@ -388,5 +385,13 @@
                 </table:columns>
             </table:Table>
         </f:content>
+        <f:footer>
+            <OverflowToolbar>
+                <Button
+                    text="Refresh"
+                    press="onRefresh"
+                />
+            </OverflowToolbar>
+        </f:footer>
     </f:DynamicPage>
 </mvc:View>

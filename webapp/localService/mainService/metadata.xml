@@ -16,6 +16,7 @@
                     <PropertyRef Name="Substep"/>
                 </Key>
                 <Property Name="Step" Type="Edm.String" Nullable="false" MaxLength="10" sap:unicode="false" sap:label="Step" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Count" Type="Edm.Int32" Nullable="false" sap:unicode="false" sap:label="INT4" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
                 <Property Name="Substep" Type="Edm.String" Nullable="false" MaxLength="10" sap:unicode="false" sap:label="Sub Step" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
                 <Property Name="SubstepDescr" Type="Edm.String" Nullable="false" MaxLength="255" sap:unicode="false" sap:label="Substep description" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
                 <NavigationProperty Name="ToTaskList" Relationship="ZODATA_MSTT_WORKOV_SRV.SubstepListToTaskList" FromRole="FromRole_SubstepListToTaskList" ToRole="ToRole_SubstepListToTaskList"/>
@@ -26,8 +27,8 @@
                     <PropertyRef Name="Substep"/>
                     <PropertyRef Name="Task"/>
                 </Key>
-                <Property Name="Step" Type="Edm.String" Nullable="false" MaxLength="10" sap:unicode="false" sap:label="Step" sap:creatable="false" sap:updatable="false" sap:sortable="false"/>
                 <Property Name="WiText" Type="Edm.String" Nullable="false" MaxLength="120" sap:unicode="false" sap:label="Work item text" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Step" Type="Edm.String" Nullable="false" MaxLength="10" sap:unicode="false" sap:label="Step" sap:creatable="false" sap:updatable="false" sap:sortable="false"/>
                 <Property Name="WiId" Type="Edm.String" Nullable="false" MaxLength="12" sap:unicode="false" sap:label="Work Item ID" sap:creatable="false" sap:updatable="false" sap:sortable="false"/>
                 <Property Name="Substep" Type="Edm.String" Nullable="false" MaxLength="10" sap:unicode="false" sap:label="Sub Step" sap:creatable="false" sap:updatable="false" sap:sortable="false"/>
                 <Property Name="WiCd" Type="Edm.DateTime" Nullable="false" Precision="7" sap:unicode="false" sap:label="Ngày tạo" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
@@ -47,12 +48,12 @@
                 <End Type="ZODATA_MSTT_WORKOV_SRV.TaskList" Multiplicity="*" Role="ToRole_SubstepListToTaskList"/>
                 <ReferentialConstraint>
                     <Principal Role="FromRole_SubstepListToTaskList">
-                        <PropertyRef Name="Step"/>
                         <PropertyRef Name="Substep"/>
+                        <PropertyRef Name="Step"/>
                     </Principal>
                     <Dependent Role="ToRole_SubstepListToTaskList">
-                        <PropertyRef Name="Step"/>
                         <PropertyRef Name="Substep"/>
+                        <PropertyRef Name="Step"/>
                     </Dependent>
                 </ReferentialConstraint>
             </Association>
