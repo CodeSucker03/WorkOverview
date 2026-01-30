@@ -37,6 +37,7 @@
                         persistencyKey="myPersKey"
                         useToolbar="false"
                         showClearOnFB="true"
+                        clear=".onClearFilters"
                         search=".onSearch"
                         filterChange=".onFilterChange"
                         afterVariantLoad=".onAfterVariantLoad"
@@ -64,9 +65,10 @@
                                         id="filterFrom"
                                         forceSelection="false"
                                         width="100%"
+                                        selectedKey="All"
                                     >
                                         <core:Item
-                                            key=""
+                                            key="All"
                                             text="All"
                                         />
                                         <core:Item
@@ -106,9 +108,10 @@
                                         id="filterPriority"
                                         forceSelection="false"
                                         width="100%"
+                                        selectedKey="All"
                                     >
                                         <core:Item
-                                            key=""
+                                            key="All"
                                             text="All"
                                         />
                                         <core:Item
@@ -176,9 +179,10 @@
                                         id="filterStatus"
                                         forceSelection="false"
                                         width="100%"
+                                        selectedKey="All"
                                     >
                                         <core:Item
-                                            key=""
+                                            key="All"
                                             text="All"
                                         />
                                         <core:Item
@@ -240,9 +244,10 @@
                                         id="filterForwardedBy"
                                         forceSelection="false"
                                         width="100%"
+                                        selectedKey="All"
                                     >
                                         <core:Item
-                                            key=""
+                                            key="All"
                                             text="All"
                                         />
                                         <core:Item
@@ -312,27 +317,25 @@
                     />
                 </table:noData>
                 <table:columns>
-                    <table:Column width="10rem">
+                    <table:Column width="15rem">
                         <Label text="Subject" />
                         <table:template>
                             <Text
-                                text="{table>TaskDescr}"
+                                text="{table>WiText}"
                                 wrapping="false"
                             />
                         </table:template>
                     </table:Column>
 
-                    <table:Column width="10rem">
-                        <Label text="TaskID" />
-                        <table:template>
-                            <Text text="{table>Task}" />
-                        </table:template>
-                    </table:Column>
-
-                    <table:Column width="10rem">
+                    <table:Column width="8rem">
                         <Label text="Sent on" />
                         <table:template>
-                            <Text text="{table>WiCd}" />
+                            <Text
+                                text="{
+                                    path: 'table>WiCd',
+                                    formatter: '.formatter.formatDate'
+                                }"
+                            />
                         </table:template>
                     </table:Column>
 
@@ -353,10 +356,14 @@
                         </table:template>
                     </table:Column>
 
-                    <table:Column width="10rem">
+                    <table:Column width="8rem">
                         <Label text="Due Date" />
                         <table:template>
-                            <Text text="{table>WiAed}" />
+                            <Text
+                                text="{path: 'table>WiAed',
+                                formatter: '.formatter.formatDate'
+                                }"
+                            />
                         </table:template>
                     </table:Column>
 

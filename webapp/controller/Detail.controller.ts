@@ -171,7 +171,11 @@ export default class Detail extends Base {
       switch (true) {
         case this.isControl<Input>(control, "sap.m.Input"):
         case this.isControl<TextArea>(control, "sap.m.TextArea"): {
-          const value = control.getValue();
+          let value = control.getValue();
+
+          if (value === "All") {
+            value = "";
+          }
 
           if (value) {
             acc.push(new Filter(name, "Contains", value));
@@ -182,7 +186,11 @@ export default class Detail extends Base {
 
         case this.isControl<DatePicker>(control, "sap.m.DatePicker"):
         case this.isControl<TimePicker>(control, "sap.m.TimePicker"): {
-          const value = control.getValue();
+          let value = control.getValue();
+
+          if (value === "All") {
+            value = "";
+          }
 
           if (value) {
             acc.push(new Filter(name, "EQ", value));
@@ -193,7 +201,11 @@ export default class Detail extends Base {
 
         case this.isControl<Select>(control, "sap.m.Select"):
         case this.isControl<ComboBox>(control, "sap.m.ComboBox"): {
-          const value = control.getSelectedKey();
+          let value = control.getSelectedKey();
+
+          if (value === "All") {
+            value = "";
+          }
 
           if (value) {
             acc.push(new Filter(name, "EQ", value));
@@ -209,6 +221,37 @@ export default class Detail extends Base {
     }, []);
 
     return filters;
+  }
+
+  public onClearFilters() {
+    this.filterBar.getFilterGroupItems().map((item) => {
+      const control = item.getControl();
+
+      switch (true) {
+        case this.isControl<Input>(control, "sap.m.Input"):
+        case this.isControl<TextArea>(control, "sap.m.TextArea"): {
+          control.setValue("");
+
+          break;
+        }
+
+        case this.isControl<DatePicker>(control, "sap.m.DatePicker"):
+        case this.isControl<TimePicker>(control, "sap.m.TimePicker"): {
+          control.setValue("");
+
+          break;
+        }
+
+        case this.isControl<Select>(control, "sap.m.Select"):
+        case this.isControl<ComboBox>(control, "sap.m.ComboBox"): {
+          control.setSelectedKey("All");
+
+          break;
+        }
+        default:
+          break;
+      }
+    });
   }
 
   // #endregion Filters
